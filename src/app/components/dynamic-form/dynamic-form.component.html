@@ -1,0 +1,19 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="dynamic-form">
+  <div *ngFor="let field of schema.fields" class="form-field">
+    <label [for]="field.name">{{ field.label }}</label>
+    <input
+      [type]="field.type"
+      [id]="field.name"
+      [formControlName]="field.name"
+      [placeholder]="field.label"
+      [required]="field.required"
+    />
+    <div *ngIf="isFieldInvalid(field.name)" class="error">
+      <span *ngIf="form.get(field.name)?.hasError('required')">{{ field.label }} is required.</span>
+      <span *ngIf="form.get(field.name)?.hasError('email')">Enter a valid email address.</span>
+    </div>
+  </div>
+  <div class="actions">
+    <button type="submit">Submit</button>
+  </div>
+</form>
