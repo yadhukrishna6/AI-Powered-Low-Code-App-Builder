@@ -11,11 +11,22 @@ datasource db {
 }
 
 model Form {
-  id        String   @id @default(uuid())
-  name      String
-  schema    Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(uuid())
+  name        String
+  schema      Json
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
 
   @@map("forms")
+}
+
+model Submission {
+  id        String   @id @default(uuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@map("submissions")
 }
