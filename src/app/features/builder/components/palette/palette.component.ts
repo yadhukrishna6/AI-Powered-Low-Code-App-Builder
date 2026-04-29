@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { DraggableFieldType } from '../../../../core/models/form.model';
+import { FormBuilderService } from '../../../../core/services/form-builder.service';
 
 @Component({
   selector: 'app-palette',
@@ -9,92 +10,228 @@ import { DraggableFieldType } from '../../../../core/models/form.model';
   imports: [CommonModule, DragDropModule],
   template: `
     <div class="palette-container">
-      <h3 class="panel-title">Components</h3>
-      <div 
-        class="palette-list"
-        cdkDropList
-        [cdkDropListData]="fieldTypes"
-        [cdkDropListConnectedTo]="['canvas-list']"
-        [cdkDropListSortingDisabled]="true"
-      >
-        @for (field of fieldTypes; track field.type) {
-          <div 
-            class="palette-item"
-            [cdkDragData]="field.type"
-            cdkDrag
-          >
-            <span class="icon">{{ field.icon }}</span>
-            <span class="label">{{ field.label }}</span>
-            
-            <!-- Drag Preview -->
-            <div *cdkDragPreview class="palette-item-preview">
-              {{ field.label }}
+      <div class="palette-section">
+        <h3 class="panel-title">Components</h3>
+        <div 
+          class="palette-list"
+          cdkDropList
+          [cdkDropListData]="fieldTypes"
+          [cdkDropListConnectedTo]="['canvas-list']"
+          [cdkDropListSortingDisabled]="true"
+        >
+          @for (field of fieldTypes; track field.type) {
+            <div 
+              class="palette-item"
+              [cdkDragData]="field.type"
+              cdkDrag
+            >
+              <div class="item-icon-wrapper">
+                <span class="icon">{{ field.icon }}</span>
+              </div>
+              <div class="item-info">
+                <span class="label">{{ field.label }}</span>
+                <span class="sub-label">{{ field.subLabel }}</span>
+              </div>
+              
+              <div *cdkDragPreview class="palette-item-preview">
+                {{ field.label }}
+              </div>
             </div>
-          </div>
-        }
+          }
+        </div>
+      </div>
+
+      <div class="saved-forms-section">
+        <div class="section-header">
+          <h3 class="panel-title">Saved Forms</h3>
+          <button class="btn-add" (click)="service.clearCanvas()" title="New Form">+</button>
+        </div>
+        <div class="forms-list">
+          <div class="forms-sub-header">My Forms</div>
+          @for (form of savedForms(); track form.id) {
+            <div class="form-card" (click)="loadForm(form.id)">
+              <div class="form-card-icon">📋</div>
+              <div class="form-card-info">
+                <span class="form-card-name">{{ form.name }}</span>
+                <span class="form-card-meta">{{ form.schema.fields.length }} fields</span>
+              </div>
+            </div>
+          } @empty {
+            <p class="empty-msg">No forms saved yet</p>
+          }
+        </div>
+        <button class="btn-view-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          View All Forms
+        </button>
       </div>
     </div>
   `,
   styles: [`
     .palette-container {
-      padding: 1.5rem;
+      padding: 1.25rem;
       height: 100%;
-      background: rgba(255, 255, 255, 0.03);
-      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
     }
     .panel-title {
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: rgba(255, 255, 255, 0.5);
-      margin-bottom: 1.5rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+      font-weight: 600;
     }
     .palette-list {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
     }
     .palette-item {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      padding: 0.75rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
       cursor: grab;
       transition: all 0.2s ease;
-      color: white;
     }
     .palette-item:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(139, 92, 246, 0.5);
+      border-color: #8b5cf6;
+      background: #f5f3ff;
       transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    .palette-item:active {
-      cursor: grabbing;
+    .item-icon-wrapper {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      border-radius: 8px;
+      color: #8b5cf6;
+      font-size: 1.1rem;
     }
-    .icon {
-      font-size: 1.25rem;
+    .item-info {
+      display: flex;
+      flex-direction: column;
     }
     .label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #1e293b;
+    }
+    .sub-label {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .btn-add {
+      color: #8b5cf6;
+      font-size: 1.25rem;
       font-weight: 500;
-      font-size: 0.9rem;
+    }
+    .forms-sub-header {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+    .form-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s;
+    }
+    .form-card:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+    .form-card-icon {
+      font-size: 1.2rem;
+    }
+    .form-card-name {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #1e293b;
+    }
+    .form-card-meta {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .btn-view-all {
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.625rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .btn-view-all:hover {
+      background: #f8fafc;
+      color: #0f172a;
     }
     .palette-item-preview {
       padding: 0.75rem 1rem;
-      background: rgba(139, 92, 246, 0.9);
+      background: #8b5cf6;
       border-radius: 8px;
       color: white;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
       pointer-events: none;
     }
   `]
 })
-export class PaletteComponent {
-  fieldTypes: DraggableFieldType[] = [
-    { type: 'text', icon: '📝', label: 'Textbox' },
-    { type: 'email', icon: '📧', label: 'Email' },
-    { type: 'date', icon: '📅', label: 'Date' }
+export class PaletteComponent implements OnInit {
+  service = inject(FormBuilderService);
+  savedForms = signal<any[]>([]);
+
+  fieldTypes: any[] = [
+    { type: 'text', icon: '📝', label: 'Text Input', subLabel: 'Single line text input' },
+    { type: 'email', icon: '📧', label: 'Email', subLabel: 'Email input field' },
+    { type: 'date', icon: '📅', label: 'Date', subLabel: 'Date picker field' },
+    { type: 'textarea', icon: '🗒️', label: 'Textarea', subLabel: 'Multi line text input' },
+    { type: 'select', icon: '🔽', label: 'Select', subLabel: 'Dropdown select' },
+    { type: 'checkbox', icon: '✅', label: 'Checkbox', subLabel: 'Checkbox input' },
+    { type: 'radio', icon: '🔘', label: 'Radio', subLabel: 'Radio button group' },
+    { type: 'number', icon: '🔢', label: 'Number', subLabel: 'Number input' },
+    { type: 'file', icon: '📁', label: 'File Upload', subLabel: 'File upload input' }
   ];
+
+  async ngOnInit() {
+    await this.refreshForms();
+  }
+
+  async refreshForms() {
+    const forms = await this.service.loadForms();
+    this.savedForms.set(forms);
+  }
+
+  async loadForm(id: string) {
+    await this.service.loadForm(id);
+  }
 }

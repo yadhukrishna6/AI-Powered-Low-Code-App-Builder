@@ -9,40 +9,62 @@ import { FieldType } from '../../../../core/models/form.model';
   standalone: true,
   imports: [CommonModule, DragDropModule],
   template: `
-    <div class="canvas-container">
+    <div class="canvas-wrapper">
       <div class="canvas-header">
         <h2 class="canvas-title">Form Canvas</h2>
-        <button class="btn-primary" (click)="saveSchema()">Save Schema</button>
+        <p class="canvas-subtitle">Drag components from the left sidebar to build your form</p>
       </div>
 
       <div 
         id="canvas-list"
         class="canvas-drop-zone"
+        [class.tablet]="service.canvasMode() === 'tablet'"
+        [class.mobile]="service.canvasMode() === 'mobile'"
         cdkDropList
         [cdkDropListData]="service.schema().fields"
         (cdkDropListDropped)="onDrop($event)"
       >
         @if (service.schema().fields.length === 0) {
           <div class="empty-state">
-            <span class="empty-icon">📥</span>
-            <p>Drag components here to start building your form</p>
+            <div class="empty-icon-box">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+            </div>
+            <h3>Start building your form</h3>
+            <p>Drag components here from the left sidebar</p>
           </div>
         }
 
         @for (field of service.schema().fields; track field.id; let i = $index) {
           <div 
-            class="field-wrapper"
+            class="field-card"
             [class.selected]="service.selectedFieldId() === field.id"
             cdkDrag
             (click)="service.selectField(field.id)"
           >
-            <div class="field-handle" cdkDragHandle>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="9" cy="9" r="1"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="15" cy="15" r="1"/>
-              </svg>
+            <div class="field-card-header">
+              <div class="drag-handle" cdkDragHandle>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                  <circle cx="9" cy="9" r="1"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="15" cy="15" r="1"/>
+                </svg>
+              </div>
+              
+              <div class="field-actions">
+                <button class="action-btn" (click)="service.duplicateField(field.id); $event.stopPropagation()" title="Duplicate">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+                <button class="action-btn delete" (click)="service.removeField(field.id); $event.stopPropagation()" title="Delete">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  </svg>
+                </button>
+              </div>
             </div>
-            
-            <div class="field-content">
+
+            <div class="field-card-body">
               <label class="field-label">
                 {{ field.label }}
                 @if (field.required) { <span class="required">*</span> }
@@ -50,132 +72,202 @@ import { FieldType } from '../../../../core/models/form.model';
               <input 
                 [type]="field.type === 'date' ? 'date' : 'text'" 
                 class="field-input" 
-                [placeholder]="field.placeholder || ''"
+                [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
                 disabled
               >
             </div>
-
-            <button class="btn-delete" (click)="service.removeField(field.id); $event.stopPropagation()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
-            </button>
           </div>
         }
+      </div>
+
+      <div class="schema-preview-section">
+        <div class="schema-header">
+          <h3 class="schema-title">Generated Schema</h3>
+          <div class="json-badge">
+            <span>&#123; &#125;</span>
+            JSON Preview
+          </div>
+        </div>
+        <div class="code-box">
+          <pre><code>{{ service.getSchemaJson() }}</code></pre>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .canvas-container {
-      padding: 2rem;
-      height: 100%;
-      background: #0f172a;
+    .canvas-wrapper {
       display: flex;
       flex-direction: column;
       gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
     }
     .canvas-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-bottom: 0.5rem;
     }
     .canvas-title {
       font-size: 1.5rem;
-      font-weight: 600;
-      color: white;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.25rem;
+    }
+    .canvas-subtitle {
+      color: #64748b;
+      font-size: 0.95rem;
     }
     .canvas-drop-zone {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.02);
-      border: 2px dashed rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 1.5rem;
-      overflow-y: auto;
       min-height: 400px;
+      background: white;
+      border: 2px dashed #e2e8f0;
+      border-radius: 20px;
+      padding: 2rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin: 0 auto;
+      width: 100%;
+    }
+    .canvas-drop-zone.tablet {
+      max-width: 768px;
+    }
+    .canvas-drop-zone.mobile {
+      max-width: 375px;
+    }
+    .canvas-drop-zone.cdk-drop-list-dragging {
+      border-color: #8b5cf6;
+      background: #f5f3ff;
     }
     .empty-state {
-      height: 100%;
+      height: 350px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: rgba(255, 255, 255, 0.4);
-      gap: 1rem;
+      color: #94a3b8;
+      text-align: center;
     }
-    .empty-icon {
-      font-size: 3rem;
-      opacity: 0.5;
-    }
-    .field-wrapper {
-      position: relative;
+    .empty-icon-box {
+      width: 80px;
+      height: 80px;
+      background: #f8fafc;
+      border-radius: 20px;
       display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 1.25rem;
-      margin-bottom: 1rem;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      color: #8b5cf6;
+    }
+    .empty-state h3 {
+      color: #0f172a;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .field-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
       cursor: pointer;
       transition: all 0.2s ease;
+      position: relative;
     }
-    .field-wrapper:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.2);
+    .field-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     }
-    .field-wrapper.selected {
-      background: rgba(139, 92, 246, 0.1);
+    .field-card.selected {
       border-color: #8b5cf6;
-      box-shadow: 0 0 0 1px #8b5cf6;
+      box-shadow: 0 0 0 1px #8b5cf6, 0 10px 15px -3px rgba(139, 92, 246, 0.1);
     }
-    .field-handle {
+    .field-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .drag-handle {
       cursor: grab;
-      color: rgba(255, 255, 255, 0.3);
-      padding-top: 0.25rem;
+      display: flex;
+      align-items: center;
     }
-    .field-content {
-      flex: 1;
+    .field-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .action-btn {
+      padding: 6px;
+      border-radius: 8px;
+      color: #94a3b8;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .action-btn.delete:hover {
+      background: #fef2f2;
+      color: #ef4444;
     }
     .field-label {
       display: block;
-      color: rgba(255, 255, 255, 0.9);
-      font-weight: 500;
-      margin-bottom: 0.5rem;
+      font-weight: 600;
       font-size: 0.95rem;
+      color: #0f172a;
+      margin-bottom: 0.75rem;
     }
     .required {
       color: #ef4444;
-      margin-left: 0.25rem;
+      margin-left: 2px;
     }
     .field-input {
       width: 100%;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      padding: 0.625rem;
-      color: rgba(255, 255, 255, 0.5);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: #64748b;
+      font-size: 0.9rem;
     }
-    .btn-delete {
-      padding: 0.5rem;
-      border-radius: 6px;
-      color: rgba(255, 255, 255, 0.3);
-      transition: all 0.2s;
+    .schema-preview-section {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.5rem;
     }
-    .btn-delete:hover {
-      background: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
+    .schema-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
     }
-    .btn-primary {
-      background: #8b5cf6;
-      color: white;
-      padding: 0.625rem 1.25rem;
+    .schema-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .json-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 6px 12px;
+      background: #f5f3ff;
+      color: #8b5cf6;
       border-radius: 8px;
-      font-weight: 500;
-      transition: all 0.2s;
+      font-size: 0.8rem;
+      font-weight: 600;
     }
-    .btn-primary:hover {
-      background: #7c3aed;
-      transform: translateY(-1px);
+    .code-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 1.25rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .code-box pre {
+      margin: 0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #334155;
+      line-height: 1.6;
     }
   `]
 })
@@ -193,9 +285,16 @@ export class CanvasComponent {
     }
   }
 
-  saveSchema() {
-    const json = this.service.getSchemaJson();
-    console.log('Form Schema Generated:', json);
-    alert('Schema logged to console! Check developer tools.');
+  async saveSchema() {
+    const formName = prompt('Enter a name for your form:', 'New Awesome Form');
+    
+    if (formName) {
+      try {
+        await this.service.saveForm(formName);
+        alert('Form saved successfully to FlowForge Backend!');
+      } catch (error) {
+        alert('Failed to save form. Make sure the backend is running.');
+      }
+    }
   }
 }
