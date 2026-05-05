@@ -231,14 +231,29 @@ export class PaletteComponent implements OnInit {
   savedForms = signal<any[]>([]);
 
   fieldTypes: DraggableFieldType[] = [
+    // Basic Inputs
     { type: 'text', icon: '📝', label: 'Text Input', subLabel: 'Single line text' },
+    { type: 'password', icon: '🔒', label: 'Password', subLabel: 'Secure text entry' },
     { type: 'email', icon: '📧', label: 'Email', subLabel: 'Email validation' },
     { type: 'number', icon: '🔢', label: 'Number', subLabel: 'Numeric input' },
     { type: 'textarea', icon: '🗒️', label: 'Textarea', subLabel: 'Multi-line text' },
+    
+    // Selection
     { type: 'select', icon: '🔽', label: 'Select', subLabel: 'Dropdown menu' },
     { type: 'radio', icon: '🔘', label: 'Radio', subLabel: 'Single selection' },
     { type: 'checkbox', icon: '✅', label: 'Checkbox', subLabel: 'Multi selection' },
-    { type: 'file', icon: '📁', label: 'File Upload', subLabel: 'Upload files' }
+    { type: 'switch', icon: '🎚️', label: 'Switch', subLabel: 'Toggle on/off' },
+    
+    // Advanced
+    { type: 'date', icon: '📅', label: 'Date Picker', subLabel: 'Select a date' },
+    { type: 'time', icon: '🕒', label: 'Time Picker', subLabel: 'Select a time' },
+    { type: 'slider', icon: '📏', label: 'Slider', subLabel: 'Range selection' },
+    { type: 'rating', icon: '⭐', label: 'Rating', subLabel: 'Star rating' },
+    { type: 'file', icon: '📁', label: 'File Upload', subLabel: 'Upload files' },
+    
+    // Content
+    { type: 'header', icon: '🏷️', label: 'Header', subLabel: 'Title text' },
+    { type: 'paragraph', icon: '📄', label: 'Paragraph', subLabel: 'Descriptive text' }
   ];
 
   async ngOnInit() {

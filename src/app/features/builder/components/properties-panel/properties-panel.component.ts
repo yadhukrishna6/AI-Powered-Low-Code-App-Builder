@@ -72,17 +72,27 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
 
           @if (activeTab === 'validation') {
             <div class="tab-pane" formGroupName="validation">
-              <div class="form-group">
+              <div class="form-group" *ngIf="['text', 'password', 'textarea'].includes(field.type)">
                 <label>Min Length</label>
                 <input type="number" formControlName="minLength" placeholder="e.g. 3">
               </div>
 
-              <div class="form-group">
+              <div class="form-group" *ngIf="['text', 'password', 'textarea'].includes(field.type)">
                 <label>Max Length</label>
                 <input type="number" formControlName="maxLength" placeholder="e.g. 50">
               </div>
 
-              <div class="form-group">
+              <div class="form-group" *ngIf="['number', 'slider', 'rating'].includes(field.type)">
+                <label>Min Value</label>
+                <input type="number" formControlName="min" placeholder="e.g. 0">
+              </div>
+
+              <div class="form-group" *ngIf="['number', 'slider', 'rating'].includes(field.type)">
+                <label>Max Value</label>
+                <input type="number" formControlName="max" placeholder="e.g. 100">
+              </div>
+
+              <div class="form-group" *ngIf="['text', 'email', 'password'].includes(field.type)">
                 <label>Pattern (Regex)</label>
                 <input type="text" formControlName="pattern" placeholder="e.g. [a-z]+">
               </div>
@@ -327,6 +337,8 @@ export class PropertiesPanelComponent {
       validation: this.fb.group({
         minLength: [null],
         maxLength: [null],
+        min: [null],
+        max: [null],
         pattern: ['']
       })
     });
@@ -343,6 +355,8 @@ export class PropertiesPanelComponent {
           validation: {
             minLength: field.validation?.minLength || null,
             maxLength: field.validation?.maxLength || null,
+            min: field.validation?.min || null,
+            max: field.validation?.max || null,
             pattern: field.validation?.pattern || ''
           }
         }, { emitEvent: false });
@@ -365,7 +379,7 @@ export class PropertiesPanelComponent {
   }
 
   hasPlaceholder(type: string): boolean {
-    return ['text', 'email', 'number', 'textarea'].includes(type);
+    return ['text', 'email', 'number', 'textarea', 'password', 'paragraph'].includes(type);
   }
 
   updateOptions(options: string[]) {

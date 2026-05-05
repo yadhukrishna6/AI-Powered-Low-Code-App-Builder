@@ -84,14 +84,32 @@ export class FormBuilderService {
   }
 
   addField(type: FieldType, index?: number) {
+    let label = `New ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    let placeholder = `Enter ${type}...`;
+    let props: any = {};
+
+    if (type === 'header') {
+      label = 'Section Title';
+      placeholder = '';
+    } else if (type === 'paragraph') {
+      label = 'Description text';
+      placeholder = 'Add your descriptive text here...';
+    } else if (type === 'rating') {
+      props = { max: 5 };
+    } else if (type === 'slider') {
+      props = { min: 0, max: 100, step: 1 };
+    } else if (['select', 'radio'].includes(type)) {
+      props = { options: ['Option 1', 'Option 2'] };
+    }
+
     const newField: FormField = {
       id: crypto.randomUUID(),
       type,
-      label: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      label,
       name: `${type}_${Date.now()}`,
       required: false,
-      placeholder: `Enter ${type}...`,
-      props: type === 'select' || type === 'radio' ? { options: ['Option 1', 'Option 2'] } : {},
+      placeholder,
+      props,
       layout: { span: 12 }
     };
 

@@ -35,6 +35,14 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
             <input type="text" [placeholder]="field.placeholder || ''" disabled class="preview-input">
           </div>
 
+          <div *ngSwitchCase="'password'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <div class="password-wrapper">
+              <input type="password" value="********" disabled class="preview-input">
+              <span class="pw-icon">👁️</span>
+            </div>
+          </div>
+
           <div *ngSwitchCase="'email'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
             <input type="email" [placeholder]="field.placeholder || ''" disabled class="preview-input">
@@ -45,13 +53,11 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
             <input type="number" [placeholder]="field.placeholder || ''" disabled class="preview-input">
           </div>
 
-          <!-- Textarea -->
           <div *ngSwitchCase="'textarea'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
             <textarea [placeholder]="field.placeholder || ''" disabled class="preview-input preview-textarea"></textarea>
           </div>
 
-          <!-- Select -->
           <div *ngSwitchCase="'select'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
             <select disabled class="preview-input">
@@ -60,7 +66,6 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
             </select>
           </div>
 
-          <!-- Radio -->
           <div *ngSwitchCase="'radio'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
             <div class="radio-group">
@@ -70,11 +75,50 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
             </div>
           </div>
 
-          <!-- Checkbox -->
           <div *ngSwitchCase="'checkbox'" class="preview-group">
             <label class="checkbox-item">
               <input type="checkbox" disabled> <span>{{ field.label }}</span>
             </label>
+          </div>
+
+          <div *ngSwitchCase="'date'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <input type="date" disabled class="preview-input">
+          </div>
+
+          <div *ngSwitchCase="'time'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <input type="time" disabled class="preview-input">
+          </div>
+
+          <div *ngSwitchCase="'switch'" class="preview-group">
+            <div class="switch-preview">
+              <label class="preview-label">{{ field.label }}</label>
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'slider'" class="preview-group">
+            <label class="preview-label">{{ field.label }}</label>
+            <div class="slider-preview">
+              <input type="range" disabled class="preview-range">
+              <div class="range-values"><span>0</span><span>100</span></div>
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'rating'" class="preview-group">
+            <label class="preview-label">{{ field.label }}</label>
+            <div class="stars-preview">
+              <span *ngFor="let i of [1,2,3,4,5]">⭐</span>
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'header'" class="preview-group">
+            <h2 class="header-preview">{{ field.label }}</h2>
+          </div>
+
+          <div *ngSwitchCase="'paragraph'" class="preview-group">
+            <p class="para-preview">{{ field.placeholder || 'Your descriptive text goes here...' }}</p>
           </div>
 
           <!-- File Upload -->
@@ -184,6 +228,22 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       color: var(--text-primary, #1f2937);
       cursor: default;
     }
+
+    .password-wrapper { position: relative; }
+    .pw-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5; font-size: 0.9rem; }
+
+    .switch-preview { display: flex; justify-content: space-between; align-items: center; }
+    .toggle-switch { width: 40px; height: 20px; background: var(--border); border-radius: 20px; position: relative; }
+    .toggle-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; background: white; border-radius: 50%; }
+
+    .slider-preview { display: flex; flex-direction: column; gap: 0.5rem; }
+    .preview-range { width: 100%; accent-color: var(--accent); }
+    .range-values { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); }
+
+    .stars-preview { display: flex; gap: 4px; font-size: 1.1rem; }
+
+    .header-preview { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .para-preview { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin: 0; }
 
     .file-zone {
       display: flex;

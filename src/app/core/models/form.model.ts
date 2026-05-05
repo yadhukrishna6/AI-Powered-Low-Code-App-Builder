@@ -1,5 +1,6 @@
 export type FieldType = 
-  | 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'file';
+  | 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'file'
+  | 'password' | 'date' | 'time' | 'switch' | 'slider' | 'rating' | 'header' | 'paragraph';
 
 export interface FormField {
   id: string;
@@ -13,6 +14,8 @@ export interface FormField {
     minLength?: number;
     maxLength?: number;
     pattern?: string;
+    min?: number;
+    max?: number;
   };
   layout?: {
     span?: number;
