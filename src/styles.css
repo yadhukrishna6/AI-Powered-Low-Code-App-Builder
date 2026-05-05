@@ -20,6 +20,7 @@
 }
 
 .dark {
+<<<<<<< HEAD
   --bg-primary: #18191c;
   --bg-secondary: #232428;
   --surface: rgba(45, 46, 50, 0.7);
@@ -30,6 +31,18 @@
   --accent-hover: #c4b5fd;
   --input-bg: rgba(0, 0, 0, 0.2);
   --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+=======
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --surface: rgba(30, 41, 59, 0.7);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #a78bfa;
+  --accent-hover: #c4b5fd;
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
 }
 
 body {

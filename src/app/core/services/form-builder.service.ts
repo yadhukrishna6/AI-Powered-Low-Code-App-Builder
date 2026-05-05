@@ -14,11 +14,19 @@ export class FormBuilderService {
   private selectedFieldIdSignal = signal<string | null>(null);
   private isSavingSignal = signal<boolean>(false);
   
+<<<<<<< HEAD
+=======
+  // New Functional Signals
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
   private themeSignal = signal<'light' | 'dark'>('light');
   private canvasModeSignal = signal<'desktop' | 'tablet' | 'mobile'>('desktop');
   private history: FormSchema[] = [];
   private historyIndex = -1;
 
+<<<<<<< HEAD
+=======
+  // Read-only signals
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
   readonly schema = computed(() => this.schemaSignal());
   readonly selectedFieldId = computed(() => this.selectedFieldIdSignal());
   readonly isSaving = computed(() => this.isSavingSignal());
@@ -34,6 +42,10 @@ export class FormBuilderService {
   });
 
   constructor() {
+<<<<<<< HEAD
+=======
+    // Save initial state to history
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
     this.saveToHistory();
   }
 
@@ -55,12 +67,27 @@ export class FormBuilderService {
   }
 
   private saveToHistory() {
+<<<<<<< HEAD
     const currentSchema = JSON.parse(JSON.stringify(this.schemaSignal()));
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);
     }
     this.history.push(currentSchema);
     this.historyIndex++;
+=======
+    // Simple undo/redo implementation
+    const currentSchema = JSON.parse(JSON.stringify(this.schemaSignal()));
+    
+    // Remove future history if we are in the middle of a chain
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+    
+    this.history.push(currentSchema);
+    this.historyIndex++;
+    
+    // Limit history size
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
     if (this.history.length > 50) {
       this.history.shift();
       this.historyIndex--;
@@ -83,6 +110,67 @@ export class FormBuilderService {
     }
   }
 
+<<<<<<< HEAD
+=======
+  duplicateField(id: string) {
+    this.schemaSignal.update(s => {
+      const fieldIndex = s.fields.findIndex(f => f.id === id);
+      if (fieldIndex === -1) return s;
+      
+      const fieldToClone = s.fields[fieldIndex];
+      const clonedField: FormField = {
+        ...JSON.parse(JSON.stringify(fieldToClone)),
+        id: crypto.randomUUID(),
+        name: `${fieldToClone.name}_copy_${Date.now()}`,
+        label: `${fieldToClone.label} (Copy)`
+      };
+      
+      const fields = [...s.fields];
+      fields.splice(fieldIndex + 1, 0, clonedField);
+      return { ...s, fields };
+    });
+    this.saveToHistory();
+  }
+
+  async saveForm(name: string) {
+    this.isSavingSignal.set(true);
+    try {
+      const payload = {
+        name,
+        schema: this.schemaSignal()
+      };
+      const response = await firstValueFrom(this.http.post(this.apiUrl, payload));
+      console.log('Form saved successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('Error saving form:', error);
+      throw error;
+    } finally {
+      this.isSavingSignal.set(false);
+    }
+  }
+
+  async loadForms() {
+    try {
+      return await firstValueFrom(this.http.get<any[]>(this.apiUrl));
+    } catch (error) {
+      console.error('Error loading forms:', error);
+      return [];
+    }
+  }
+
+  async loadForm(id: string) {
+    try {
+      const form = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
+      this.schemaSignal.set(form.schema);
+      this.selectField(null);
+      return form;
+    } catch (error) {
+      console.error('Error loading form:', error);
+    }
+  }
+
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
   addField(type: FieldType, index?: number) {
     const newField: FormField = {
       id: crypto.randomUUID(),
@@ -107,6 +195,7 @@ export class FormBuilderService {
 
     this.selectField(newField.id);
     this.saveToHistory();
+<<<<<<< HEAD
   }
 
   updateField(id: string, updates: Partial<FormField>) {
@@ -126,6 +215,8 @@ export class FormBuilderService {
       this.selectField(null);
     }
     this.saveToHistory();
+=======
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
   }
 
   moveField(previousIndex: number, currentIndex: number) {
@@ -138,6 +229,7 @@ export class FormBuilderService {
     this.saveToHistory();
   }
 
+<<<<<<< HEAD
   duplicateField(id: string) {
     this.schemaSignal.update(s => {
       const fieldIndex = s.fields.findIndex(f => f.id === id);
@@ -155,6 +247,25 @@ export class FormBuilderService {
       fields.splice(fieldIndex + 1, 0, clonedField);
       return { ...s, fields };
     });
+=======
+  removeField(id: string) {
+    this.schemaSignal.update(s => ({
+      ...s,
+      fields: s.fields.filter(f => f.id !== id)
+    }));
+    
+    if (this.selectedFieldIdSignal() === id) {
+      this.selectedFieldIdSignal.set(null);
+    }
+    this.saveToHistory();
+  }
+
+  updateField(id: string, updates: Partial<FormField>) {
+    this.schemaSignal.update(s => ({
+      ...s,
+      fields: s.fields.map(f => f.id === id ? { ...f, ...updates } : f)
+    }));
+>>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
     this.saveToHistory();
   }
 
