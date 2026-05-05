@@ -1,6 +1,6 @@
 import { Component, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
 import { OptionsEditorComponent } from './controls/options-editor.component';
 
@@ -10,18 +10,6 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
   imports: [CommonModule, ReactiveFormsModule, OptionsEditorComponent],
   template: `
     <div class="properties-container">
-<<<<<<< HEAD
-      <div class="panel-container">
-=======
-      <h3 class="panel-title">Properties</h3>
-      <p class="panel-subtitle">Select a field to edit its properties</p>
-
-      <div class="tabs">
-        <button class="tab-btn active">Field Settings</button>
-        <button class="tab-btn">Form Settings</button>
-      </div>
-
->>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
       @if (service.selectedField(); as field) {
         <div class="panel-header">
           <div class="type-header">
@@ -62,15 +50,13 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
                 </label>
               </div>
 
-              @if (field.type === 'column') {
-                <div class="form-group">
-                  <label>Column Span ({{ propForm.get('span')?.value }}/12)</label>
-                  <div class="grid-slider">
-                    <input type="range" formControlName="span" min="1" max="12" class="range-input">
-                    <span class="span-value">{{ propForm.get('span')?.value }}</span>
-                  </div>
+              <div class="form-group">
+                <label>Width ({{ propForm.get('span')?.value }}/12)</label>
+                <div class="grid-slider">
+                  <input type="range" formControlName="span" min="1" max="12" class="range-input">
+                  <span class="span-value">{{ propForm.get('span')?.value }}</span>
                 </div>
-              }
+              </div>
 
               @if (['select', 'radio'].includes(field.type)) {
                 <div class="form-group">
@@ -117,110 +103,94 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
       } @else {
         <div class="no-selection">
           <div class="empty-illustration">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" stroke-width="1.5">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
               <path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M2 14h4m4-9h4m4 11h4"/>
             </svg>
           </div>
-<<<<<<< HEAD
-          <h3>Select a component on the canvas</h3>
-=======
           <h3>Select a field on the canvas</h3>
->>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
           <p>to edit its properties</p>
         </div>
       }
     </div>
   `,
   styles: [`
-<<<<<<< HEAD
-    .properties-container { padding: 1.5rem; height: 100%; background: var(--bg-secondary); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-    .panel-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600; }
-    .panel-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem; }
-    .panel-container { height: 100%; display: flex; flex-direction: column; }
-    .panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg-primary); }
-    .type-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .type-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--accent); background: rgba(139, 92, 246, 0.1); padding: 2px 8px; border-radius: 4px; }
-    .id-label { font-size: 0.7rem; color: var(--text-secondary); font-family: monospace; }
-    
-    .tabs-nav { display: flex; background: var(--input-bg); padding: 4px; border-radius: 8px; gap: 4px; }
-    .tabs-nav button { flex: 1; padding: 6px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-    .tabs-nav button:hover { color: var(--text-primary); }
-    .tabs-nav button.active { background: white; color: var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-
-    .panel-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
-    .tab-pane { display: flex; flex-direction: column; gap: 1.5rem; animation: fadeIn 0.3s ease-out; }
-    
-    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-    .form-group label { font-size: 0.85rem; color: var(--text-primary); font-weight: 600; }
-    .form-group input:not([type="range"]) { background: var(--input-bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; color: var(--text-primary); font-size: 0.9rem; transition: all 0.2s; }
-    .form-group input:focus { outline: none; border-color: var(--accent); }
-    .grid-slider { display: flex; align-items: center; gap: 1rem; }
-    .range-input { flex: 1; accent-color: var(--accent); }
-    .span-value { font-weight: 700; color: var(--accent); font-size: 1rem; width: 20px; }
-    .form-toggle { display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); font-size: 0.9rem; font-weight: 500; }
-    
-    .logic-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; text-align: center; color: var(--text-secondary); gap: 1rem; opacity: 0.7; }
-    .logic-placeholder p { font-size: 0.85rem; max-width: 200px; }
-
-    .no-selection { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: var(--text-secondary); }
-    .empty-icon { margin-bottom: 1.5rem; opacity: 0.3; color: var(--accent); }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
-=======
     .properties-container {
-      padding: 1.5rem;
       height: 100%;
-      background: white;
-      border-left: 1px solid #e2e8f0;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
     }
-    .panel-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
+
+    /* ─── Header ─── */
+    .panel-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-primary);
     }
-    .panel-subtitle {
-      font-size: 0.8rem;
-      color: #94a3b8;
-      margin-bottom: 1.5rem;
-    }
-    .tabs {
+    .type-header {
       display: flex;
-      border-bottom: 1px solid #f1f5f9;
-      margin-bottom: 2rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
     }
-    .tab-btn {
+    .type-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(139, 92, 246, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .id-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+
+    /* ─── Tabs ─── */
+    .tabs-nav {
+      display: flex;
+      background: var(--input-bg);
+      padding: 4px;
+      border-radius: 8px;
+      gap: 4px;
+    }
+    .tabs-nav button {
       flex: 1;
-      padding: 0.75rem 0.5rem;
-      font-size: 0.85rem;
+      padding: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
       font-weight: 600;
-      color: #94a3b8;
-      position: relative;
+      border-radius: 6px;
+      cursor: pointer;
       transition: all 0.2s;
     }
-    .tab-btn.active {
-      color: #8b5cf6;
+    .tabs-nav button:hover { color: var(--text-primary); }
+    .tabs-nav button.active {
+      background: var(--bg-primary);
+      color: var(--accent);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .tab-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: #8b5cf6;
+
+    /* ─── Content ─── */
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
     }
-    .prop-form {
+    .tab-pane {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      animation: fadeIn 0.3s ease-out;
     }
+
+    /* ─── Form Controls ─── */
     .form-group {
       display: flex;
       flex-direction: column;
@@ -228,92 +198,116 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
     }
     .form-group label {
       font-size: 0.85rem;
-      color: #1e293b;
+      color: var(--text-primary);
       font-weight: 600;
     }
-    .form-group input {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+    .form-group input:not([type="range"]):not([type="checkbox"]) {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.75rem;
-      color: #1e293b;
+      color: var(--text-primary);
       font-size: 0.9rem;
       transition: all 0.2s;
     }
     .form-group input:focus {
       outline: none;
-      border-color: #8b5cf6;
-      background: white;
-      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.05);
+      border-color: var(--accent);
     }
+
+    .grid-slider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .range-input {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+    .span-value {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1rem;
+      width: 20px;
+    }
+
     .form-toggle {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      color: #1e293b;
+      color: var(--text-primary);
       font-size: 0.9rem;
       font-weight: 500;
-      margin-top: 0.5rem;
     }
+
+    /* ─── Logic Placeholder ─── */
+    .logic-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      text-align: center;
+      color: var(--text-secondary);
+      gap: 1rem;
+      opacity: 0.7;
+    }
+    .logic-placeholder p {
+      font-size: 0.85rem;
+      max-width: 200px;
+    }
+
+    /* ─── Empty State ─── */
     .no-selection {
-      flex: 1;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding-bottom: 4rem;
+      padding: 2rem;
+      color: var(--text-secondary);
     }
     .empty-illustration {
       margin-bottom: 1.5rem;
+      color: var(--accent);
     }
     .no-selection h3 {
       font-size: 0.95rem;
       font-weight: 700;
-      color: #64748b;
+      color: var(--text-secondary);
       margin-bottom: 0.25rem;
     }
     .no-selection p {
       font-size: 0.875rem;
-      color: #94a3b8;
+      color: var(--text-secondary);
+      opacity: 0.7;
     }
 
-    /* Switch toggle styling */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
->>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
-    }
+    /* ─── Toggle Switch ─── */
     .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
-<<<<<<< HEAD
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--accent); }
-=======
     .slider {
-      position: absolute;
-      cursor: pointer;
+      position: absolute; cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #e2e8f0;
-      transition: .4s;
-      border-radius: 24px;
+      background-color: var(--border);
+      transition: .4s; border-radius: 24px;
     }
     .slider:before {
-      position: absolute;
-      content: "";
+      position: absolute; content: "";
       height: 18px; width: 18px;
       left: 3px; bottom: 3px;
       background-color: white;
-      transition: .4s;
-      border-radius: 50%;
+      transition: .4s; border-radius: 50%;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    input:checked + .slider { background-color: #8b5cf6; }
->>>>>>> b74a011b5b8280ab7fac5925a29a405bf1eb4792
+    input:checked + .slider { background-color: var(--accent); }
     input:checked + .slider:before { transform: translateX(20px); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   `]
 })
 export class PropertiesPanelComponent {
@@ -358,19 +352,20 @@ export class PropertiesPanelComponent {
     this.propForm.valueChanges.subscribe(values => {
       const field = this.service.selectedField();
       if (field) {
-        const updates: any = {
+        this.service.updateField(field.id, {
           label: values.label,
           name: values.name,
           placeholder: values.placeholder,
           required: values.required,
-          validation: values.validation
-        };
-        if (field.type === 'column') {
-          updates.layout = { ...field.layout, span: values.span };
-        }
-        this.service.updateField(field.id, updates);
+          validation: values.validation,
+          layout: { span: values.span }
+        });
       }
     });
+  }
+
+  hasPlaceholder(type: string): boolean {
+    return ['text', 'email', 'number', 'textarea'].includes(type);
   }
 
   updateOptions(options: string[]) {

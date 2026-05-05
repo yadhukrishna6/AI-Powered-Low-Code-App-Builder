@@ -54,7 +54,6 @@
       }
     }
   },
-  "defaultProject": "ai-powered-low-code-app-builder",
   "cli": {
     "analytics": false
   }
