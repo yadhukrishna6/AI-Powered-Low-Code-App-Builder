@@ -95,6 +95,12 @@ import { DynamicRendererComponent } from './dynamic-renderer.component';
     }
     .canvas-drop-zone.tablet { max-width: 768px; }
     .canvas-drop-zone.mobile { max-width: 375px; }
+
+    /* Force full width on mobile preview */
+    .canvas-drop-zone.mobile .canvas-grid > * {
+      grid-column: span 12 !important;
+    }
+
     .canvas-drop-zone.cdk-drop-list-dragging {
       border-color: var(--accent);
       background: var(--input-bg);
