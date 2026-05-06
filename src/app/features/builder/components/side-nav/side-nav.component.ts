@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { ProjectService } from '../../../../core/services/project.service';
 
 @Component({
   selector: 'app-side-nav',
@@ -27,6 +28,7 @@ import { RouterModule } from '@angular/router';
           <div class="nav-item" 
                routerLink="/dashboard"
                routerLinkActive="active"
+               [routerLinkActiveOptions]="{exact: true}"
                title="Home Dashboard">
             <div class="icon-box">
               <span class="material-icons">dashboard</span>
@@ -35,21 +37,22 @@ import { RouterModule } from '@angular/router';
           </div>
         </div>
 
-        <div class="nav-section">
-          <div class="section-label">PROJECTS</div>
+        <!-- Project Context (Only if project active) -->
+        <div class="nav-section" *ngIf="projectService.activeProject() as project">
+          <div class="section-label">WORKSPACE: {{ project.name }}</div>
           
           <div class="nav-item" 
-               routerLink="/designer"
+               [routerLink]="['/project', project.id, 'designer']"
                routerLinkActive="active"
                title="Visual App Designer">
             <div class="icon-box">
               <span class="material-icons">architecture</span>
             </div>
-            <span class="label">App Designer</span>
+            <span class="label">Designer</span>
           </div>
 
           <div class="nav-item" 
-               routerLink="/workflow"
+               [routerLink]="['/project', project.id, 'workflow']"
                routerLinkActive="active"
                title="Workflow Automation">
             <div class="icon-box">
@@ -59,7 +62,7 @@ import { RouterModule } from '@angular/router';
           </div>
 
           <div class="nav-item" 
-               routerLink="/rules"
+               [routerLink]="['/project', project.id, 'rules']"
                routerLinkActive="active"
                title="Rule Engine">
             <div class="icon-box">
@@ -67,32 +70,19 @@ import { RouterModule } from '@angular/router';
             </div>
             <span class="label">Rule Engine</span>
           </div>
-        </div>
-
-        <div class="nav-section">
-          <div class="section-label">DATA</div>
-          
-          <div class="nav-item" 
-               routerLink="/forms"
-               routerLinkActive="active"
-               title="Form Management">
-            <div class="icon-box">
-              <span class="material-icons">description</span>
-            </div>
-            <span class="label">Forms</span>
-          </div>
 
           <div class="nav-item" 
-               routerLink="/submissions"
+               [routerLink]="['/project', project.id, 'submissions']"
                routerLinkActive="active"
                title="Submissions">
             <div class="icon-box">
-              <span class="material-icons">people</span>
+              <span class="material-icons">storage</span>
             </div>
-            <span class="label">Submissions</span>
+            <span class="label">Data</span>
           </div>
         </div>
 
+        <!-- System Section -->
         <div class="nav-section">
           <div class="section-label">SYSTEM</div>
           
@@ -256,6 +246,7 @@ import { RouterModule } from '@angular/router';
   `]
 })
 export class SideNavComponent {
+  projectService = inject(ProjectService);
   isCollapsed = signal(true);
 
   toggle() {

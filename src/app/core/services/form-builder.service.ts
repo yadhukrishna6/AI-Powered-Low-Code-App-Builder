@@ -2,7 +2,9 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormField, FormSchema, FieldType } from '../models/form.model';
 import { firstValueFrom } from 'rxjs';
+import { ProjectService } from './project.service';
 
+// Central service for form state management
 @Injectable({
   providedIn: 'root'
 })
@@ -10,6 +12,7 @@ export class FormBuilderService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:3000/api/v1/forms';
   
+  private projectService = inject(ProjectService);
   private schemaSignal = signal<FormSchema>({ fields: [] });
   private selectedFieldIdSignal = signal<string | null>(null);
   private isSavingSignal = signal<boolean>(false);
@@ -61,6 +64,13 @@ export class FormBuilderService {
     }
     this.history.push(currentSchema);
     this.historyIndex++;
+    
+    // Sync with active project
+    const activeProject = this.projectService.activeProject();
+    if (activeProject) {
+      this.projectService.updateProjectSchema(activeProject.id, currentSchema);
+    }
+
     if (this.history.length > 50) {
       this.history.shift();
       this.historyIndex--;
@@ -176,6 +186,15 @@ export class FormBuilderService {
     this.saveToHistory();
   }
 
+  loadProjectSchema(schema: any) {
+    if (schema) {
+      this.schemaSignal.set(JSON.parse(JSON.stringify(schema)));
+      this.history = [JSON.parse(JSON.stringify(schema))];
+      this.historyIndex = 0;
+      this.selectField(null);
+    }
+  }
+
   selectField(id: string | null) {
     this.selectedFieldIdSignal.set(id);
   }
@@ -216,5 +235,45 @@ export class FormBuilderService {
     } catch (error) {
       console.error('Error loading form:', error);
     }
+  }
+
+  async generateFromPrompt(prompt: string) {
+    this.isSavingSignal.set(true);
+    
+    // Simulate AI thinking
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    this.schemaSignal.set({ fields: [] });
+    const p = prompt.toLowerCase();
+
+    // Basic heuristic-based generation (Simulation)
+    if (p.includes('contact') || p.includes('feedback')) {
+      this.addField('text');
+      this.updateField(this.schemaSignal().fields[0].id, { label: 'Full Name', placeholder: 'e.g. John Doe' });
+      this.addField('email');
+      this.updateField(this.schemaSignal().fields[1].id, { label: 'Email Address', required: true });
+      this.addField('textarea');
+      this.updateField(this.schemaSignal().fields[2].id, { label: 'Message/Feedback', placeholder: 'How can we help?' });
+    } else if (p.includes('onboarding') || p.includes('hire') || p.includes('employee')) {
+      this.addField('header');
+      this.updateField(this.schemaSignal().fields[0].id, { label: 'Employee Onboarding' });
+      this.addField('text');
+      this.updateField(this.schemaSignal().fields[1].id, { label: 'First Name', layout: { span: 6 } });
+      this.addField('text');
+      this.updateField(this.schemaSignal().fields[2].id, { label: 'Last Name', layout: { span: 6 } });
+      this.addField('select');
+      this.updateField(this.schemaSignal().fields[3].id, { label: 'Department', props: { options: ['Engineering', 'Marketing', 'Sales', 'HR'] } });
+      this.addField('date');
+      this.updateField(this.schemaSignal().fields[4].id, { label: 'Start Date' });
+    } else {
+      // Default generic form
+      this.addField('text');
+      this.updateField(this.schemaSignal().fields[0].id, { label: 'Title' });
+      this.addField('textarea');
+      this.updateField(this.schemaSignal().fields[1].id, { label: 'Description' });
+    }
+
+    this.selectField(null);
+    this.isSavingSignal.set(false);
   }
 }

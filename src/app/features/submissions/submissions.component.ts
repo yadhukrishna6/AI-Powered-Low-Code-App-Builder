@@ -1,11 +1,13 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
+import { ProjectService } from '../../core/services/project.service';
 
 interface Submission {
   id: string;
   formName: string;
   user: string;
-  date: string;
+  timestamp: Date;
   status: 'pending' | 'approved' | 'rejected';
   data: any;
 }
@@ -55,7 +57,7 @@ interface Submission {
                 </div>
               </td>
               <td>{{ item.user }}</td>
-              <td>{{ item.date }}</td>
+              <td>{{ item.timestamp | date:'mediumDate' }}</td>
               <td>
                 <span class="status-badge" [class]="item.status">
                   {{ item.status }}
@@ -182,31 +184,22 @@ interface Submission {
     .empty-state .material-icons { font-size: 3rem; opacity: 0.2; margin-bottom: 1rem; }
   `]
 })
-export class SubmissionsComponent {
-  submissions = signal<Submission[]>([
-    {
-      id: 'sub_1',
-      formName: 'Customer Feedback',
-      user: 'John Doe',
-      date: 'May 6, 2026',
-      status: 'approved',
-      data: {}
-    },
-    {
-      id: 'sub_2',
-      formName: 'Internal Expense Claim',
-      user: 'Sarah Smith',
-      date: 'May 5, 2026',
-      status: 'pending',
-      data: {}
-    },
-    {
-      id: 'sub_3',
-      formName: 'IT Support Ticket',
-      user: 'Mike Johnson',
-      date: 'May 4, 2026',
-      status: 'rejected',
-      data: {}
+export class SubmissionsComponent implements OnInit {
+  projectService = inject(ProjectService);
+  route = inject(ActivatedRoute);
+
+  submissions = computed(() => {
+    return (this.projectService.activeProject()?.submissions || []) as Submission[];
+  });
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.projectService.setActiveProject(id);
     }
-  ]);
+  }
+
+  deleteSubmission(id: string) {
+    // Implement delete logic if needed
+  }
 }

@@ -1,13 +1,14 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { RouterModule } from '@angular/router';
 import { DraggableFieldType } from '../../../../core/models/form.model';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
 
 @Component({
   selector: 'app-palette',
   standalone: true,
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, DragDropModule, RouterModule],
   template: `
     <div class="palette-container thin-scrollbar">
       <div class="palette-section">
@@ -44,28 +45,33 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
 
       <div class="saved-forms-section">
         <div class="section-header">
-          <h3 class="panel-title">Saved Forms</h3>
-          <button class="btn-add" (click)="service.clearCanvas()" title="New Form">+</button>
+          <h3 class="panel-title">Form Templates</h3>
+          <button class="btn-add" (click)="service.clearCanvas()" title="Reset Canvas">
+            <span class="material-icons" style="font-size: 1.2rem;">restart_alt</span>
+          </button>
         </div>
         <div class="forms-list">
-          <div class="forms-sub-header">My Forms</div>
+          <div class="forms-sub-header">Shared Library</div>
           @for (form of savedForms(); track form.id) {
             <div class="form-card" (click)="loadForm(form.id)">
-              <div class="form-card-icon">📋</div>
+              <div class="form-card-icon">
+                <span class="material-icons">description</span>
+              </div>
               <div class="form-card-info">
                 <span class="form-card-name">{{ form.name }}</span>
-                <span class="form-card-meta">{{ form.schema.fields.length }} fields</span>
+                <span class="form-card-meta">Click to import into workspace</span>
               </div>
             </div>
           } @empty {
-            <p class="empty-msg">No forms saved yet</p>
+            <div class="empty-msg">
+              <span class="material-icons">info_outline</span>
+              <p>No templates available in library</p>
+            </div>
           }
         </div>
-        <button class="btn-view-all">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-          </svg>
-          View All Forms
+        <button class="btn-view-all" routerLink="/templates">
+          <span class="material-icons" style="font-size: 1rem;">apps</span>
+          Browse All Templates
         </button>
       </div>
     </div>
@@ -187,12 +193,19 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       color: var(--text-secondary);
     }
     .empty-msg {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      font-style: italic;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem 1rem;
       text-align: center;
-      padding: 1rem;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      font-size: 0.8rem;
     }
+    .empty-msg .material-icons { opacity: 0.3; font-size: 1.5rem; }
     .btn-view-all {
       width: 100%;
       margin-top: 1rem;

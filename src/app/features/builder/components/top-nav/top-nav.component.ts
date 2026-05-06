@@ -1,18 +1,26 @@
-import { Component, inject, Output, EventEmitter } from '@angular/core';
+// Top navigation bar with project actions
+import { Component, inject, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
+import { ProjectService } from '../../../../core/services/project.service';
+import { ModalService } from '../../../../core/services/modal.service';
 
 @Component({
   selector: 'app-top-nav',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <nav class="top-nav">
       <div class="nav-left">
-        <div class="context-label">
-          <span class="material-icons">architecture</span>
-          <span class="label-text">App Designer</span>
-        </div>
+        <span class="material-icons" style="color: var(--accent); font-size: 1.2rem; opacity: 0.8;">architecture</span>
+        <input
+          class="project-title-input"
+          [value]="projectName"
+          (blur)="onNameChange($event)"
+          (keydown.enter)="$any($event.target).blur()"
+          placeholder="Untitled App"
+        >
       </div>
 
       <div class="nav-center">
@@ -80,6 +88,10 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
         <button class="btn-clear" (click)="service.clearCanvas()">
           Clear
         </button>
+        <button class="btn-play" (click)="testSubmission()" title="Simulate Submission">
+          <span class="material-icons">send</span>
+          <span>Test</span>
+        </button>
         <button 
           class="btn-save" 
           (click)="save()"
@@ -105,14 +117,25 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       border-bottom: 1px solid var(--border);
       z-index: 90;
     }
-    .nav-left .context-label {
+    .nav-left {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      color: var(--text-primary);
+      gap: 0.75rem;
     }
-    .context-label .material-icons { font-size: 1.2rem; color: var(--accent); opacity: 0.8; }
-    .context-label .label-text { font-weight: 700; font-size: 0.9rem; letter-spacing: -0.01em; }
+    .project-title-input {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0.35rem 0.6rem;
+      min-width: 180px;
+      max-width: 260px;
+      transition: all 0.2s;
+    }
+    .project-title-input:hover { border-color: var(--border); }
+    .project-title-input:focus { border-color: var(--accent); outline: none; background: var(--bg-secondary); }
 
     .nav-center {
       display: flex;
@@ -208,15 +231,65 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
 })
 export class TopNavComponent {
   service = inject(FormBuilderService);
+  projectService = inject(ProjectService);
+  private modalService = inject(ModalService);
+  
+  @Input() projectName = 'Untitled App';
   @Output() onAiClick = new EventEmitter<void>();
 
-  save() {
-    const formName = prompt('Enter a name for your form:', 'New Awesome Form');
+  onNameChange(event: Event) {
+    const newName = (event.target as HTMLInputElement).value.trim();
+    const project = this.projectService.activeProject();
+    if (newName && project) {
+      this.projectService.updateProjectName(project.id, newName);
+    }
+  }
+
+  async save() {
+    const formName = await this.modalService.show({
+      title: 'Save Application',
+      message: 'Enter a name for this application design:',
+      type: 'prompt',
+      placeholder: 'e.g. Employee Registration',
+      confirmText: 'Save Now'
+    });
+
     if (formName) {
       this.service.saveForm(formName).then(() => {
-        alert('Form saved successfully!');
+        this.modalService.show({
+          title: 'Success',
+          message: 'Your application design has been saved to the workspace.',
+          type: 'success',
+          confirmText: 'Great!'
+        });
       }).catch(() => {
-        alert('Failed to save form.');
+        this.modalService.show({
+          title: 'Error',
+          message: 'Failed to save the application. Please try again.',
+          type: 'danger'
+        });
+      });
+    }
+  }
+
+  async testSubmission() {
+    const project = this.projectService.activeProject();
+    if (project) {
+      const mockData = {
+        id: crypto.randomUUID(),
+        formName: project.name,
+        user: 'Simulated User',
+        timestamp: new Date(),
+        status: 'pending',
+        data: { test: true }
+      };
+      this.projectService.addSubmission(project.id, mockData);
+      
+      await this.modalService.show({
+        title: 'Simulation Successful',
+        message: 'A mock submission has been added to the workspace. You can view it in the "Data" tab.',
+        type: 'success',
+        confirmText: 'View Data now'
       });
     }
   }

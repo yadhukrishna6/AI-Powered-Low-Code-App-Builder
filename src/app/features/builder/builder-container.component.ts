@@ -1,10 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { TopNavComponent } from './components/top-nav/top-nav.component';
 import { PaletteComponent } from './components/palette/palette.component';
 import { CanvasComponent } from './components/canvas/canvas.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
+import { AIAssistantComponent } from './components/ai-assistant/ai-assistant.component';
+import { ProjectService } from '../../core/services/project.service';
+import { FormBuilderService } from '../../core/services/form-builder.service';
 
+// Main workspace container for the visual designer
 @Component({
   selector: 'app-builder-container',
   standalone: true,
@@ -13,11 +18,16 @@ import { PropertiesPanelComponent } from './components/properties-panel/properti
     TopNavComponent,
     PaletteComponent,
     CanvasComponent,
-    PropertiesPanelComponent
+    PropertiesPanelComponent,
+    AIAssistantComponent
   ],
   template: `
     <div class="designer-workspace">
-      <app-top-nav></app-top-nav>
+      <app-top-nav 
+        [projectName]="projectService.activeProject()?.name ?? 'Untitled App'"
+        (onAiClick)="showAiModal.set(true)">
+      </app-top-nav>
+      
       <main class="builder-content">
         <aside class="left-panel thin-scrollbar">
           <app-palette></app-palette>
@@ -29,6 +39,12 @@ import { PropertiesPanelComponent } from './components/properties-panel/properti
           <app-properties-panel></app-properties-panel>
         </aside>
       </main>
+
+      <!-- AI Assistant Modal -->
+      <app-ai-assistant 
+        *ngIf="showAiModal()" 
+        (close)="showAiModal.set(false)">
+      </app-ai-assistant>
     </div>
   `,
   styles: [`
@@ -66,5 +82,20 @@ import { PropertiesPanelComponent } from './components/properties-panel/properti
     }
   `]
 })
-export class BuilderContainerComponent {}
+export class BuilderContainerComponent implements OnInit {
+  route = inject(ActivatedRoute);
+  projectService = inject(ProjectService);
+  formService = inject(FormBuilderService);
+  showAiModal = signal(false);
 
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.projectService.setActiveProject(id);
+      const project = this.projectService.activeProject();
+      if (project && project.schema) {
+        this.formService.loadProjectSchema(project.schema);
+      }
+    }
+  }
+}

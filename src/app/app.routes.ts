@@ -15,6 +15,28 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      // Project-scoped routes
+      {
+        path: 'project/:id/designer',
+        loadComponent: () => import('./features/builder/builder-container.component').then(m => m.BuilderContainerComponent)
+      },
+      {
+        path: 'project/:id/workflow',
+        loadComponent: () => import('./features/workflow/workflow-builder/workflow-builder.component').then(m => m.WorkflowBuilderComponent)
+      },
+      {
+        path: 'project/:id/rules',
+        loadComponent: () => import('./features/rule-engine/rule-engine.component').then(m => m.RuleEngineComponent)
+      },
+      {
+        path: 'project/:id/submissions',
+        loadComponent: () => import('./features/submissions/submissions.component').then(m => m.SubmissionsComponent)
+      },
+      {
+        path: 'templates',
+        loadComponent: () => import('./features/templates/templates.component').then(m => m.TemplatesComponent)
+      },
+      // Global module routes (no project context)
       {
         path: 'designer',
         loadComponent: () => import('./features/builder/builder-container.component').then(m => m.BuilderContainerComponent)
@@ -28,16 +50,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/rule-engine/rule-engine.component').then(m => m.RuleEngineComponent)
       },
       {
-        path: 'forms',
-        loadComponent: () => import('./features/builder/builder-container.component').then(m => m.BuilderContainerComponent) // Placeholder
-      },
-      {
         path: 'submissions',
         loadComponent: () => import('./features/submissions/submissions.component').then(m => m.SubmissionsComponent)
       },
       {
         path: 'settings',
-        loadComponent: () => import('./features/builder/builder-container.component').then(m => m.BuilderContainerComponent) // Placeholder
+        loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
       }
     ]
   }

@@ -1,12 +1,14 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Workflow, WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
 import { NODE_REGISTRY } from '../registry/node-registry';
+import { ProjectService } from '../../../core/services/project.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorkflowStateService {
+  private projectService = inject(ProjectService);
   // State Signals
   private _workflow = signal<Workflow>({
     id: uuidv4(),
@@ -35,6 +37,13 @@ export class WorkflowStateService {
   zoomLevel = computed(() => this._zoomLevel());
   panPosition = computed(() => this._panPosition());
 
+  private syncWithProject() {
+    const activeProject = this.projectService.activeProject();
+    if (activeProject) {
+      this.projectService.updateProjectWorkflows(activeProject.id, [this._workflow()]);
+    }
+  }
+
   // Actions
   addNode(subType: string, position: Position) {
     const registryEntry = NODE_REGISTRY[subType];
@@ -56,6 +65,7 @@ export class WorkflowStateService {
     }));
 
     this.selectNode(newNode.id);
+    this.syncWithProject();
   }
 
   updateNodePosition(nodeId: string, position: Position) {
@@ -63,6 +73,7 @@ export class WorkflowStateService {
       ...w,
       nodes: w.nodes.map(n => n.id === nodeId ? { ...n, position } : n)
     }));
+    this.syncWithProject();
   }
 
   updateNodeData(nodeId: string, data: any) {
@@ -70,6 +81,7 @@ export class WorkflowStateService {
       ...w,
       nodes: w.nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)
     }));
+    this.syncWithProject();
   }
 
   removeNode(nodeId: string) {
@@ -79,10 +91,10 @@ export class WorkflowStateService {
       edges: w.edges.filter(e => e.source !== nodeId && e.target !== nodeId)
     }));
     if (this._selectedNodeId() === nodeId) this._selectedNodeId.set(null);
+    this.syncWithProject();
   }
 
   addEdge(sourceId: string, targetId: string) {
-    // Prevent duplicate edges
     const exists = this._workflow().edges.some(
       e => e.source === sourceId && e.target === targetId
     );
@@ -98,6 +110,7 @@ export class WorkflowStateService {
       ...w,
       edges: [...w.edges, newEdge]
     }));
+    this.syncWithProject();
   }
 
   removeEdge(edgeId: string) {
@@ -105,6 +118,7 @@ export class WorkflowStateService {
       ...w,
       edges: w.edges.filter(e => e.id !== edgeId)
     }));
+    this.syncWithProject();
   }
 
   selectNode(nodeId: string | null) {
@@ -122,7 +136,22 @@ export class WorkflowStateService {
 
   // State Persistence
   loadWorkflow(workflow: Workflow) {
-    this._workflow.set(workflow);
+    this._workflow.set(JSON.parse(JSON.stringify(workflow)));
+  }
+
+  loadProjectWorkflows(workflows: Workflow[]) {
+    if (workflows && workflows.length > 0) {
+      this.loadWorkflow(workflows[0]);
+    } else {
+      // Reset to empty if no workflows
+      this._workflow.set({
+        id: uuidv4(),
+        name: 'Untitled Workflow',
+        nodes: [],
+        edges: [],
+        metadata: { version: '1.0.0', lastSaved: new Date() }
+      });
+    }
   }
 
   exportWorkflow(): Workflow {

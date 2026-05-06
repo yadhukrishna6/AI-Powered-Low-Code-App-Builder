@@ -1,5 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
+import { ProjectService } from '../../../core/services/project.service';
 import { WorkflowStateService } from '../services/workflow-state.service';
 import { WorkflowRuntimeService } from '../services/workflow-runtime.service';
 import { NodePaletteComponent } from '../palette/node-palette.component';
@@ -20,7 +22,7 @@ import { PropertiesPanelComponent } from '../properties-panel/properties-panel.c
       <!-- Top Bar (Optional, can reuse existing or add unique one) -->
       <div class="workflow-header">
         <div class="header-left">
-          <span class="workflow-name">{{ state.workflow().name }}</span>
+          <span class="workflow-name">{{ projectService.activeProject()?.name ?? state.workflow().name }}</span>
           <span class="status-badge" [class.active]="isRunning">
             {{ isRunning ? 'Running...' : 'Draft' }}
           </span>
@@ -134,10 +136,23 @@ import { PropertiesPanelComponent } from '../properties-panel/properties-panel.c
     }
   `]
 })
-export class WorkflowBuilderComponent {
+export class WorkflowBuilderComponent implements OnInit {
   state = inject(WorkflowStateService);
   runtime = inject(WorkflowRuntimeService);
+  route = inject(ActivatedRoute);
+  projectService = inject(ProjectService);
   isRunning = false;
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.projectService.setActiveProject(id);
+      const project = this.projectService.activeProject();
+      if (project && project.workflows) {
+        this.state.loadProjectWorkflows(project.workflows);
+      }
+    }
+  }
 
   async runWorkflow() {
     this.isRunning = true;

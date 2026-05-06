@@ -1,8 +1,10 @@
+// Workspace dashboard
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProjectService, Project } from '../../core/services/project.service';
+import { ModalService } from '../../core/services/modal.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,20 +21,20 @@ import { ProjectService, Project } from '../../core/services/project.service';
         <div class="header-actions">
           <button class="btn-create" (click)="showModal.set(true)">
             <span class="material-icons">add</span>
-            New Project
+            New Application
           </button>
         </div>
       </header>
 
       <section class="projects-section">
         <div class="projects-grid">
-          <div *ngFor="let project of projectService.projects()" class="project-card" [routerLink]="project.type === 'App' ? '/designer' : '/workflow'">
+          <div *ngFor="let project of projectService.projects()" class="project-card" (click)="navigateToProject(project)">
             <div class="card-preview" [style.background-color]="project.thumbnailColor">
-              <span class="material-icons">{{ project.type === 'App' ? 'architecture' : 'hub' }}</span>
+              <span class="material-icons">rocket_launch</span>
             </div>
             <div class="card-content">
               <div class="card-top">
-                <span class="badge">{{ project.type }}</span>
+                <span class="badge">Workspace</span>
                 <span class="status" [class]="project.status.toLowerCase()">{{ project.status }}</span>
               </div>
               <h3>{{ project.name }}</h3>
@@ -49,7 +51,7 @@ import { ProjectService, Project } from '../../core/services/project.service';
           <div class="create-card" (click)="showModal.set(true)">
             <div class="create-inner">
               <span class="material-icons">add_circle_outline</span>
-              <span>Create New Project</span>
+              <span>Create New Workspace</span>
             </div>
           </div>
         </div>
@@ -59,7 +61,7 @@ import { ProjectService, Project } from '../../core/services/project.service';
       <div class="modal-overlay" *ngIf="showModal()">
         <div class="modal-content fade-in">
           <div class="modal-header">
-            <h2>Create New Project</h2>
+            <h2>Create New Workspace</h2>
             <button class="close-btn" (click)="showModal.set(false)">
               <span class="material-icons">close</span>
             </button>
@@ -67,33 +69,19 @@ import { ProjectService, Project } from '../../core/services/project.service';
           
           <div class="modal-body">
             <div class="form-group">
-              <label>Project Name</label>
+              <label>Workspace Name</label>
               <input type="text" [(ngModel)]="newName" placeholder="e.g. Sales CRM">
             </div>
 
             <div class="form-group">
-              <label>Project Type</label>
-              <div class="type-selector">
-                <button [class.active]="newType === 'App'" (click)="newType = 'App'">
-                  <span class="material-icons">architecture</span>
-                  <span>Application</span>
-                </button>
-                <button [class.active]="newType === 'Workflow'" (click)="newType = 'Workflow'">
-                  <span class="material-icons">hub</span>
-                  <span>Workflow</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="form-group">
               <label>Description (Optional)</label>
-              <textarea [(ngModel)]="newDesc" placeholder="What is this project for?"></textarea>
+              <textarea [(ngModel)]="newDesc" placeholder="What is this workspace for?"></textarea>
             </div>
           </div>
 
           <div class="modal-footer">
             <button class="btn-secondary" (click)="showModal.set(false)">Cancel</button>
-            <button class="btn-primary" (click)="createProject()" [disabled]="!newName">Create Project</button>
+            <button class="btn-primary" (click)="createProject()" [disabled]="!newName">Create Workspace</button>
           </div>
         </div>
       </div>
@@ -261,23 +249,38 @@ import { ProjectService, Project } from '../../core/services/project.service';
 })
 export class DashboardComponent {
   projectService = inject(ProjectService);
-  
+  router = inject(Router);
+
   showModal = signal(false);
   newName = '';
-  newType: 'App' | 'Workflow' = 'App';
   newDesc = '';
+
+  navigateToProject(project: Project) {
+    this.projectService.setActiveProject(project.id);
+    this.router.navigate(['/project', project.id, 'designer']);
+  }
 
   createProject() {
     if (!this.newName) return;
-    this.projectService.addProject(this.newName, this.newType, this.newDesc);
+    const project = this.projectService.addProject(this.newName, this.newDesc);
     this.showModal.set(false);
     this.newName = '';
     this.newDesc = '';
-    this.newType = 'App';
+    // Navigate immediately to the new workspace designer
+    this.navigateToProject(project);
   }
 
-  deleteProject(id: string) {
-    if (confirm('Are you sure you want to delete this project?')) {
+  private modalService = inject(ModalService);
+
+  async deleteProject(id: string) {
+    const confirmed = await this.modalService.show({
+      title: 'Delete Workspace',
+      message: 'Are you sure you want to permanently delete this workspace and all its data? This action cannot be undone.',
+      type: 'danger',
+      confirmText: 'Delete Forever'
+    });
+    
+    if (confirmed) {
       this.projectService.deleteProject(id);
     }
   }
