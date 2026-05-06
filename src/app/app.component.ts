@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
-import { BuilderContainerComponent } from './features/builder/builder-container.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [BuilderContainerComponent],
+  imports: [RouterOutlet],
   template: `
-    <app-builder-container></app-builder-container>
+    <router-outlet></router-outlet>
   `,
   styles: [`
     :host {

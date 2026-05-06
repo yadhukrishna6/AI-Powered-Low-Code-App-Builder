@@ -10,7 +10,7 @@ export class WorkflowStateService {
   // State Signals
   private _workflow = signal<Workflow>({
     id: uuidv4(),
-    name: 'New Workflow',
+    name: 'Untitled Workflow',
     nodes: [],
     edges: [],
     metadata: {

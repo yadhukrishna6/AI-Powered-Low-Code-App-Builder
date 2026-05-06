@@ -1,62 +1,69 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NavigationService, AppView } from '../../../../core/services/navigation.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-side-nav',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <aside class="side-nav" [class.collapsed]="isCollapsed()">
       <div class="nav-header">
         <div class="logo-box">
-          <span class="logo-icon">⚡</span>
+          <div class="logo-circle">
+            <span class="material-icons">bolt</span>
+          </div>
           <span class="logo-text">FlowForge</span>
         </div>
-        <button class="toggle-btn" (click)="toggle()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12h18M3 6h18M3 18h18" *ngIf="isCollapsed()"/>
-            <path d="M19 12H5M12 19l-7-7 7-7" *ngIf="!isCollapsed()"/>
-          </svg>
+        <button class="toggle-btn" (click)="toggle()" [title]="isCollapsed() ? 'Expand' : 'Collapse'">
+          <span class="material-icons">
+            {{ isCollapsed() ? 'menu' : 'menu_open' }}
+          </span>
         </button>
       </div>
 
-      <div class="nav-scroll">
+      <div class="nav-scroll thin-scrollbar">
         <div class="nav-section">
-          <div class="section-label">DESIGN</div>
+          <div class="nav-item" 
+               routerLink="/dashboard"
+               routerLinkActive="active"
+               title="Home Dashboard">
+            <div class="icon-box">
+              <span class="material-icons">dashboard</span>
+            </div>
+            <span class="label">Dashboard</span>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="section-label">PROJECTS</div>
           
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'designer'" 
-               (click)="nav.setView('designer')"
+               routerLink="/designer"
+               routerLinkActive="active"
                title="Visual App Designer">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/>
-              </svg>
+              <span class="material-icons">architecture</span>
             </div>
-            <span class="label">Visual App Designer</span>
+            <span class="label">App Designer</span>
           </div>
 
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'workflow'"
-               (click)="nav.setView('workflow')"
+               routerLink="/workflow"
+               routerLinkActive="active"
                title="Workflow Automation">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-              </svg>
+              <span class="material-icons">hub</span>
             </div>
-            <span class="label">Workflow Automation</span>
+            <span class="label">Workflows</span>
           </div>
 
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'rules'"
-               (click)="nav.setView('rules')"
+               routerLink="/rules"
+               routerLinkActive="active"
                title="Rule Engine">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-              </svg>
+              <span class="material-icons">gavel</span>
             </div>
             <span class="label">Rule Engine</span>
           </div>
@@ -66,25 +73,21 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
           <div class="section-label">DATA</div>
           
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'forms'"
-               (click)="nav.setView('forms')"
+               routerLink="/forms"
+               routerLinkActive="active"
                title="Form Management">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-              </svg>
+              <span class="material-icons">description</span>
             </div>
-            <span class="label">Form Management</span>
+            <span class="label">Forms</span>
           </div>
 
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'submissions'"
-               (click)="nav.setView('submissions')"
+               routerLink="/submissions"
+               routerLinkActive="active"
                title="Submissions">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
+              <span class="material-icons">people</span>
             </div>
             <span class="label">Submissions</span>
           </div>
@@ -94,13 +97,11 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
           <div class="section-label">SYSTEM</div>
           
           <div class="nav-item" 
-               [class.active]="nav.activeView() === 'settings'"
-               (click)="nav.setView('settings')"
+               routerLink="/settings"
+               routerLinkActive="active"
                title="Settings">
             <div class="icon-box">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
+              <span class="material-icons">settings</span>
             </div>
             <span class="label">Settings</span>
           </div>
@@ -139,10 +140,18 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
       gap: 0.75rem;
       overflow: hidden;
     }
-    .logo-icon {
-      font-size: 1.5rem;
+    .logo-circle {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: var(--bg-primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
     }
+    .logo-circle .material-icons { font-size: 1.25rem; }
     .logo-text {
       font-size: 1.25rem;
       font-weight: 800;
@@ -157,11 +166,15 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
       padding: 0.5rem;
       border-radius: 8px;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .toggle-btn:hover {
       background: var(--input-bg);
       color: var(--accent);
     }
+    .toggle-btn .material-icons { font-size: 1.25rem; }
 
     /* Scrollable Area */
     .nav-scroll {
@@ -201,6 +214,7 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
       transition: all 0.2s;
       white-space: nowrap;
       position: relative;
+      text-decoration: none;
     }
     .nav-item:hover {
       color: var(--text-primary);
@@ -242,7 +256,6 @@ import { NavigationService, AppView } from '../../../../core/services/navigation
   `]
 })
 export class SideNavComponent {
-  nav = inject(NavigationService);
   isCollapsed = signal(true);
 
   toggle() {
