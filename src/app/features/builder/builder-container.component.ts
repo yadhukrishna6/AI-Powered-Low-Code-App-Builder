@@ -25,7 +25,7 @@ import { SideNavComponent } from './components/side-nav/side-nav.component';
         <app-top-nav></app-top-nav>
         
         <main class="builder-content">
-          <aside class="left-panel">
+          <aside class="left-panel thin-scrollbar">
             <app-palette></app-palette>
           </aside>
           
@@ -33,7 +33,7 @@ import { SideNavComponent } from './components/side-nav/side-nav.component';
             <app-canvas></app-canvas>
           </section>
           
-          <aside class="right-panel">
+          <aside class="right-panel thin-scrollbar">
             <app-properties-panel></app-properties-panel>
           </aside>
         </main>
@@ -79,12 +79,6 @@ import { SideNavComponent } from './components/side-nav/side-nav.component';
       padding: 2rem;
       transition: background 0.3s ease;
     }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
   `]
 })
 export class BuilderContainerComponent {}

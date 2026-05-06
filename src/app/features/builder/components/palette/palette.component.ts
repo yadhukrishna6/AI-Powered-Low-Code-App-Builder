@@ -9,7 +9,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
   standalone: true,
   imports: [CommonModule, DragDropModule],
   template: `
-    <div class="palette-container">
+    <div class="palette-container thin-scrollbar">
       <div class="palette-section">
         <h3 class="panel-title">Components</h3>
         
