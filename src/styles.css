@@ -12,9 +12,10 @@
   --surface: #ffffff;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
-  --border: #e2e8f0;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
+  --border: #dce1e7;
+  --accent: #000000;
+  --accent-rgb: 0, 0, 0;
+  --accent-hover: #1e293b;
   --input-bg: #f8fafc;
   --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
@@ -26,8 +27,9 @@
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --border: rgba(255, 255, 255, 0.1);
-  --accent: #a78bfa;
-  --accent-hover: #c4b5fd;
+  --accent: #ffffff;
+  --accent-rgb: 255, 255, 255;
+  --accent-hover: #e2e8f0;
   --input-bg: rgba(0, 0, 0, 0.2);
   --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
@@ -106,7 +108,7 @@ button {
 .cdk-drag-placeholder {
   opacity: 0.3;
   border: 2px dashed var(--accent) !important;
-  background: rgba(139, 92, 246, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
   border-radius: 12px;
 }
 
@@ -134,13 +136,13 @@ button {
 
 /* Drag & Drop Feedback */
 .cdk-drop-list-active {
-  background: rgba(139, 92, 246, 0.03) !important;
+  background: rgba(var(--accent-rgb), 0.03) !important;
   border-color: var(--accent) !important;
   border-style: dashed !important;
 }
 
 .cdk-drop-list-receiving {
-  background: rgba(139, 92, 246, 0.08) !important;
+  background: rgba(var(--accent-rgb), 0.08) !important;
 }
 
 /* Animations */

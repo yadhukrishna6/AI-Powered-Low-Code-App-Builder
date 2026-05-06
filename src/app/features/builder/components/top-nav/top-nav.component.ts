@@ -172,7 +172,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     }
     .btn-save {
       background: var(--accent);
-      color: white;
+      color: var(--bg-primary);
       padding: 0.625rem 1.25rem;
       border-radius: 10px;
       font-weight: 600;
@@ -182,7 +182,6 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     .btn-save:hover:not(:disabled) {
       background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.3);
     }
     .btn-save:disabled {
       opacity: 0.5;

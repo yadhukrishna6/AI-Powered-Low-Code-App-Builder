@@ -108,7 +108,6 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     }
     .palette-item:hover {
       border-color: var(--accent);
-      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
       transform: translateY(-1px);
     }
     .item-icon-wrapper {
@@ -117,7 +116,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(139, 92, 246, 0.08);
+      background: rgba(var(--accent-rgb), 0.08);
       border-radius: 8px;
       font-size: 1.1rem;
     }
@@ -170,7 +169,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     }
     .form-card:hover {
       border-color: var(--accent);
-      background: rgba(139, 92, 246, 0.03);
+      background: rgba(var(--accent-rgb), 0.03);
     }
     .form-card-icon { font-size: 1.25rem; }
     .form-card-info {
@@ -221,7 +220,6 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       background: var(--accent);
       border-radius: 8px;
       color: white;
-      box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
       pointer-events: none;
     }
   `]

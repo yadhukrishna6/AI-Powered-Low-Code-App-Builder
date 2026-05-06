@@ -150,7 +150,7 @@ import { OptionsEditorComponent } from './controls/options-editor.component';
       font-weight: 700;
       text-transform: uppercase;
       color: var(--accent);
-      background: rgba(139, 92, 246, 0.1);
+      background: rgba(var(--accent-rgb), 0.1);
       padding: 2px 8px;
       border-radius: 4px;
     }

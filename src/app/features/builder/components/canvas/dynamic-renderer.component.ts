@@ -168,19 +168,16 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     /* ─── Card Shell ─── */
     .field-card {
       background: var(--bg-primary, #fff);
-      border: 1.5px solid var(--border, #e5e7eb);
+      border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
       transition: all 0.2s ease;
       cursor: pointer;
     }
     .field-card:hover {
-      border-color: var(--accent, #8b5cf6);
-      box-shadow: 0 2px 12px rgba(139, 92, 246, 0.08);
+      border-color: var(--accent);
     }
     .field-card.selected {
-      border-color: var(--accent, #8b5cf6);
-      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25), 0 4px 16px rgba(139, 92, 246, 0.1);
     }
 
     /* ─── Card Body ─── */
@@ -308,8 +305,8 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       transition: all 0.15s;
     }
     .footer-btn:hover {
-      background: rgba(139, 92, 246, 0.1);
-      color: var(--accent, #8b5cf6);
+      background: rgba(var(--accent-rgb), 0.1);
+      color: var(--accent, #000000);
     }
     .footer-btn.delete:hover {
       background: rgba(239, 68, 68, 0.1);
@@ -319,12 +316,11 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
     /* ─── Drag Preview ─── */
     .drag-preview {
       padding: 0.5rem 1rem;
-      background: var(--accent, #8b5cf6);
+      background: var(--accent, #000000);
       color: white;
       border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 600;
-      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
     }
   `]
 })

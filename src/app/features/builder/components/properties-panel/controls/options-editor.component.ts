@@ -62,7 +62,7 @@ import { FormsModule } from '@angular/forms';
       font-weight: 600;
       transition: all 0.2s;
     }
-    .add-option-btn:hover { background: rgba(139, 92, 246, 0.05); border-color: var(--accent); }
+    .add-option-btn:hover { background: rgba(var(--accent-rgb), 0.05); border-color: var(--accent); }
   `]
 })
 export class OptionsEditorComponent {
