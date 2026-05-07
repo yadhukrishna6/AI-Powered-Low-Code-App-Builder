@@ -88,12 +88,25 @@ export class BuilderContainerComponent implements OnInit {
   formService = inject(FormBuilderService);
   showAiModal = signal(false);
 
-  ngOnInit() {
+  async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectService.setActiveProject(id);
-      // Load form from API
-      this.formService.loadForm(id);
+      this.formService.currentProjectId.set(id);
+      
+      try {
+        const project = await this.projectService.getProject(id);
+        if (project && project.forms && project.forms.length > 0) {
+          // Load the first form for this project
+          await this.formService.loadForm(project.forms[0].id);
+        } else {
+          // New project or no forms, clear canvas
+          this.formService.clearCanvas();
+        }
+      } catch (e) {
+        console.error('Failed to load project or form:', e);
+        this.formService.clearCanvas();
+      }
     }
   }
 }

@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { WorkflowStateService } from '../services/workflow-state.service';
 import { NodeRegistryService } from '../registry/node-registry.service';
 import { ModalService } from '../../../core/services/modal.service';
+import { DynamicPropertyComponent } from './dynamic-property.component';
 
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DynamicPropertyComponent],
   template: `
     <div class="properties-container">
       <div *ngIf="state.selectedNode() as node; else emptyState">
@@ -36,7 +37,6 @@ import { ModalService } from '../../../core/services/modal.service';
               <input type="text" [(ngModel)]="node.label" (ngModelChange)="updateNode(node)">
             </div>
             
-            <!-- Node Conversion -->
             <div class="field">
               <label>Change Node Type</label>
               <select [ngModel]="node.subType" (ngModelChange)="convertNode(node, $event)">
@@ -65,78 +65,18 @@ import { ModalService } from '../../../core/services/modal.service';
           <div class="prop-section">
             <h4 class="section-title">Node Parameters</h4>
             
-            <div [ngSwitch]="node.subType" class="dynamic-fields">
-              
-              <!-- Webhook Trigger -->
-              <div *ngSwitchCase="'webhook'">
-                <label>HTTP Method</label>
-                <select [(ngModel)]="node.data.method" (ngModelChange)="updateNode(node)">
-                  <option value="POST">POST</option>
-                  <option value="GET">GET</option>
-                </select>
-                <label>Relative Path</label>
-                <div class="path-input">
-                  <span class="prefix">/hooks</span>
-                  <input type="text" [(ngModel)]="node.data.path" (ngModelChange)="updateNode(node)">
-                </div>
-              </div>
+            <div class="dynamic-fields">
+              <app-dynamic-property 
+                *ngFor="let prop of registry.getEntry(node.subType).properties"
+                [property]="prop"
+                [data]="node.data"
+                (change)="updateNode(node)">
+              </app-dynamic-property>
 
-              <!-- Loop Logic -->
-              <div *ngSwitchCase="'loop'">
-                <label>Collection Array (Variable)</label>
-                <input type="text" [(ngModel)]="node.data.collection" placeholder="{{ '{{steps.get_users.output}}' }}" (ngModelChange)="updateNode(node)">
-                <label>Item Alias</label>
-                <input type="text" [(ngModel)]="node.data.alias" placeholder="item" (ngModelChange)="updateNode(node)">
+              <div *ngIf="!registry.getEntry(node.subType).properties?.length" class="info-alert">
+                <span class="material-icons">info</span>
+                <p>This node uses default execution parameters. No custom configuration required.</p>
               </div>
-
-              <!-- Switch Logic -->
-              <div *ngSwitchCase="'switch'">
-                <label>Variable to Evaluate</label>
-                <input type="text" [(ngModel)]="node.data.variable" (ngModelChange)="updateNode(node)">
-                <div class="case-list">
-                  <div class="case-header">Path Definitions</div>
-                  <p class="help-text">Outputs are routed based on matching cases.</p>
-                </div>
-              </div>
-
-              <!-- API Request Action -->
-              <div *ngSwitchCase="'api-request'">
-                <label>Method</label>
-                <select [(ngModel)]="node.data.method" (ngModelChange)="updateNode(node)">
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                </select>
-                <label>URL</label>
-                <input type="text" [(ngModel)]="node.data.url" placeholder="https://api.example.com" (ngModelChange)="updateNode(node)">
-              </div>
-
-              <!-- Transform Data Action -->
-              <div *ngSwitchCase="'transform-data'">
-                <label>Transformation Script (JS)</label>
-                <textarea [(ngModel)]="node.data.script" rows="8" placeholder="return input.map(i => i.id);" (ngModelChange)="updateNode(node)"></textarea>
-                <p class="help-text">Use AI to generate this script via the assistant.</p>
-              </div>
-
-              <!-- Save Data Action -->
-              <div *ngSwitchCase="'save-data'">
-                <label>Target Database Table</label>
-                <select [(ngModel)]="node.data.table" (ngModelChange)="updateNode(node)">
-                  <option value="users">Users</option>
-                  <option value="orders">Orders</option>
-                  <option value="logs">System Logs</option>
-                </select>
-              </div>
-
-              <!-- Default Fallback -->
-              <div *ngSwitchDefault>
-                <div class="info-alert">
-                  <span class="material-icons">info</span>
-                  <p>This node uses default execution parameters. No custom configuration required.</p>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
@@ -185,7 +125,12 @@ import { ModalService } from '../../../core/services/modal.service';
     }
     .delete-btn:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
-    .panel-content { padding: 1.5rem; flex: 1; overflow-y: auto; }
+    .panel-content { 
+      padding: 1.5rem; 
+      flex: 1; 
+      overflow-y: auto; 
+      max-height: calc(100vh - 72px - 84px); /* Subtract header and node header heights */
+    }
 
     .prop-section { margin-bottom: 2rem; }
     .section-title { 

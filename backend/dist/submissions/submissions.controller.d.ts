@@ -19,6 +19,7 @@ export declare class SubmissionsController {
         form: {
             name: string;
             schema: import("@prisma/client/runtime/library").JsonValue;
+            projectId: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;

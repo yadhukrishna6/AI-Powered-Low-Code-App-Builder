@@ -9,6 +9,7 @@ export interface Project {
   lastModified: Date;
   status: 'Published' | 'Draft';
   thumbnailColor: string;
+  forms?: any[];
 }
 
 @Injectable({
@@ -37,6 +38,10 @@ export class ProjectService {
     } catch (e) {
       console.error('Failed to load projects:', e);
     }
+  }
+
+  async getProject(id: string): Promise<any> {
+    return firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
   }
 
   setActiveProject(id: string | null) {

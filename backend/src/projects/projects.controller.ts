@@ -14,6 +14,7 @@ export class ProjectsController {
   findAll() {
     return this.prisma.project.findMany({
       include: {
+        forms: true,
         _count: {
           select: { forms: true, workflows: true }
         }

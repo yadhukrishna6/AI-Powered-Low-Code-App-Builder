@@ -45,16 +45,49 @@ model Submission {
 }
 
 model Workflow {
-  id        String   @id @default(uuid())
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-  name      String
-  graph     Json
-  status    String   @default("draft")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(uuid())
+  projectId   String?
+  project     Project?    @relation(fields: [projectId], references: [id])
+  name        String
+  description String?
+  graph       Json        // { nodes: Node[], edges: Edge[] }
+  status      String      @default("draft") // draft, active, archived
+  version     Int         @default(1)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  executions  WorkflowExecution[]
 
   @@map("workflows")
+}
+
+model WorkflowExecution {
+  id            String    @id @default(uuid())
+  workflowId    String
+  workflow      Workflow  @relation(fields: [workflowId], references: [id])
+  status        String    @default("queued") // queued, running, waiting, success, failed, cancelled
+  triggerSource String?   // webhook, form, schedule, manual
+  context       Json      // Variables and data passed through the flow
+  result        Json?     // Final output
+  startTime     DateTime  @default(now())
+  endTime       DateTime?
+  logs          WorkflowLog[]
+
+  @@map("workflow_executions")
+}
+
+model WorkflowLog {
+  id            String    @id @default(uuid())
+  executionId   String
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id])
+  nodeId        String
+  nodeType      String
+  status        String    // running, success, error, skipped
+  input         Json?
+  output        Json?
+  error         String?
+  timestamp     DateTime  @default(now())
+
+  @@map("workflow_logs")
 }
 
 model BusinessRule {

@@ -18,6 +18,7 @@ export class FormBuilderService {
   selectedFieldId = signal<string | null>(null);
   canvasMode = signal<'desktop' | 'tablet' | 'mobile'>('desktop');
   isSaving = signal(false);
+  currentProjectId = signal<string | null>(null);
 
   selectedField = computed(() => 
     this.formFields().find(f => f.id === this.selectedFieldId()) || null
@@ -55,7 +56,8 @@ export class FormBuilderService {
     try {
       const payload = {
         name,
-        schema: this.exportFormSchema()
+        schema: this.exportFormSchema(),
+        projectId: this.currentProjectId()
       };
       await firstValueFrom(this.http.post(this.apiUrl, payload));
       this.isSaving.set(false);
@@ -116,6 +118,7 @@ export class FormBuilderService {
   clearCanvas() {
     this.formFields.set([]);
     this.selectedFieldId.set(null);
+    this.layout.set({ columns: 12, gap: 20 });
   }
 
   exportFormSchema() {

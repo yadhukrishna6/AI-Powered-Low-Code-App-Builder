@@ -7,6 +7,7 @@ export declare class FormsService {
     create(createFormDto: CreateFormDto): Promise<{
         name: string;
         schema: import("@prisma/client/runtime/library").JsonValue;
+        projectId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -14,6 +15,7 @@ export declare class FormsService {
     findAll(): Promise<{
         name: string;
         schema: import("@prisma/client/runtime/library").JsonValue;
+        projectId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -21,6 +23,7 @@ export declare class FormsService {
     findOne(id: string): Promise<{
         name: string;
         schema: import("@prisma/client/runtime/library").JsonValue;
+        projectId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -28,6 +31,7 @@ export declare class FormsService {
     update(id: string, updateFormDto: UpdateFormDto): Promise<{
         name: string;
         schema: import("@prisma/client/runtime/library").JsonValue;
+        projectId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;

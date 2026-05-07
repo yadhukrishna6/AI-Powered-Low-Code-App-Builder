@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsObject, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateFormDto {
   @IsString()
@@ -8,4 +8,8 @@ export class CreateFormDto {
   @IsObject()
   @IsNotEmpty()
   schema: any;
+
+  @IsUUID()
+  @IsOptional()
+  projectId?: string;
 }

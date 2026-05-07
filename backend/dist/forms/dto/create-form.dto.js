@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 class CreateFormDto {
     name;
     schema;
+    projectId;
 }
 exports.CreateFormDto = CreateFormDto;
 __decorate([
@@ -26,4 +27,9 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", Object)
 ], CreateFormDto.prototype, "schema", void 0);
+__decorate([
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateFormDto.prototype, "projectId", void 0);
 //# sourceMappingURL=create-form.dto.js.map
