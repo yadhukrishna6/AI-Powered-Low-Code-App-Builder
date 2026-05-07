@@ -92,10 +92,8 @@ export class BuilderContainerComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectService.setActiveProject(id);
-      const project = this.projectService.activeProject();
-      if (project && project.schema) {
-        this.formService.loadProjectSchema(project.schema);
-      }
+      // Load form from API
+      this.formService.loadForm(id);
     }
   }
 }

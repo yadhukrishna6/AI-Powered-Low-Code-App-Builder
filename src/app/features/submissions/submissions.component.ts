@@ -1,6 +1,8 @@
 import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { ProjectService } from '../../core/services/project.service';
 
 interface Submission {
@@ -187,19 +189,29 @@ interface Submission {
 export class SubmissionsComponent implements OnInit {
   projectService = inject(ProjectService);
   route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
 
-  submissions = computed(() => {
-    return (this.projectService.activeProject()?.submissions || []) as Submission[];
-  });
+  submissionsSignal = signal<Submission[]>([]);
+  submissions = computed(() => this.submissionsSignal());
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectService.setActiveProject(id);
     }
+    this.loadSubmissions();
+  }
+
+  async loadSubmissions() {
+    try {
+      const data = await firstValueFrom(this.http.get<Submission[]>('http://localhost:3000/api/v1/submissions'));
+      this.submissionsSignal.set(data);
+    } catch (e) {
+      console.error('Failed to load submissions:', e);
+    }
   }
 
   deleteSubmission(id: string) {
-    // Implement delete logic if needed
+    // TODO: Implement API delete
   }
 }

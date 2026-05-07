@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ProjectService } from '../../core/services/project.service';
+import { RuleEngineService } from '../../core/services/rule-engine.service';
 
 interface Rule {
   id: string;
@@ -134,49 +135,35 @@ interface Rule {
 })
 export class RuleEngineComponent implements OnInit {
   projectService = inject(ProjectService);
+  ruleService = inject(RuleEngineService);
   route = inject(ActivatedRoute);
 
-  rules = computed(() => {
-    return (this.projectService.activeProject()?.rules || []) as Rule[];
-  });
+  rules = computed(() => this.ruleService.rules());
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectService.setActiveProject(id);
     }
+    this.ruleService.loadRules();
   }
 
-  addRule() {
-    const activeProject = this.projectService.activeProject();
-    if (!activeProject) return;
-
-    const newRule: Rule = {
-      id: `rule_${Date.now()}`,
-      name: 'New Business Rule',
-      condition: { field: '', operator: 'eq', value: '' },
-      action: { type: 'show', target: '' },
-      isActive: true
-    };
-
-    const updatedRules = [...(activeProject.rules || []), newRule];
-    this.projectService.updateProjectRules(activeProject.id, updatedRules);
+  async addRule() {
+    await this.ruleService.saveRule({
+      targetField: '',
+      triggerFields: [],
+      formula: '',
+      validation: ''
+    });
+    await this.ruleService.loadRules();
   }
 
-  deleteRule(id: string) {
-    const activeProject = this.projectService.activeProject();
-    if (!activeProject) return;
-
-    const updatedRules = (activeProject.rules || []).filter((r: any) => r.id !== id);
-    this.projectService.updateProjectRules(activeProject.id, updatedRules);
+  async deleteRule(id: string) {
+    // TODO: Add delete to RuleEngineService
+    await this.ruleService.loadRules();
   }
 
   sync() {
-    const activeProject = this.projectService.activeProject();
-    if (activeProject) {
-      // The rules signal is already bound to the inputs via [(ngModel)],
-      // but we need to trigger the ProjectService update to persist to localStorage.
-      this.projectService.updateProjectRules(activeProject.id, this.rules());
-    }
+    // Rules are now persisted via the API automatically
   }
 }

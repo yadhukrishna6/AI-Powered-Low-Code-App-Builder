@@ -1,5 +1,5 @@
 // Workspace dashboard
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -247,30 +247,32 @@ import { ModalService } from '../../core/services/modal.service';
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   projectService = inject(ProjectService);
   router = inject(Router);
+  private modalService = inject(ModalService);
 
   showModal = signal(false);
   newName = '';
   newDesc = '';
+
+  ngOnInit() {
+    this.projectService.loadProjects();
+  }
 
   navigateToProject(project: Project) {
     this.projectService.setActiveProject(project.id);
     this.router.navigate(['/project', project.id, 'designer']);
   }
 
-  createProject() {
+  async createProject() {
     if (!this.newName) return;
-    const project = this.projectService.addProject(this.newName, this.newDesc);
+    const project = await this.projectService.addProject(this.newName, this.newDesc);
     this.showModal.set(false);
     this.newName = '';
     this.newDesc = '';
-    // Navigate immediately to the new workspace designer
     this.navigateToProject(project);
   }
-
-  private modalService = inject(ModalService);
 
   async deleteProject(id: string) {
     const confirmed = await this.modalService.show({
@@ -281,7 +283,7 @@ export class DashboardComponent {
     });
     
     if (confirmed) {
-      this.projectService.deleteProject(id);
+      await this.projectService.deleteProject(id);
     }
   }
 }

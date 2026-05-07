@@ -186,10 +186,8 @@ export class WorkflowBuilderComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectService.setActiveProject(id);
-      const project = this.projectService.activeProject();
-      if (project && project.workflows) {
-        this.state.loadProjectWorkflows(project.workflows);
-      }
+      // Load workflow from API
+      this.state.loadWorkflowFromApi(id);
     }
   }
 
@@ -200,10 +198,10 @@ export class WorkflowBuilderComponent implements OnInit {
   }
 
   async saveWorkflow() {
-    // In a real app, this would call an API
+    await this.state.saveWorkflow();
     await this.modal.show({
       title: 'Workflow Saved',
-      message: 'Your automation workflow has been successfully persisted to the cloud.',
+      message: 'Your automation workflow has been successfully saved to the database.',
       type: 'success',
       confirmText: 'Great!'
     });

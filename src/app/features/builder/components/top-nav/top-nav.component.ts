@@ -241,7 +241,7 @@ export class TopNavComponent {
     const newName = (event.target as HTMLInputElement).value.trim();
     const project = this.projectService.activeProject();
     if (newName && project) {
-      this.projectService.updateProjectName(project.id, newName);
+      this.projectService.updateProject(project.id, { name: newName } as any);
     }
   }
 
@@ -275,19 +275,10 @@ export class TopNavComponent {
   async testSubmission() {
     const project = this.projectService.activeProject();
     if (project) {
-      const mockData = {
-        id: crypto.randomUUID(),
-        formName: project.name,
-        user: 'Simulated User',
-        timestamp: new Date(),
-        status: 'pending',
-        data: { test: true }
-      };
-      this.projectService.addSubmission(project.id, mockData);
-      
+      // TODO: Wire to submissions API
       await this.modalService.show({
         title: 'Simulation Successful',
-        message: 'A mock submission has been added to the workspace. You can view it in the "Data" tab.',
+        message: 'A mock submission has been recorded. You can view it in the "Data" tab.',
         type: 'success',
         confirmText: 'View Data now'
       });

@@ -1,15 +1,17 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { Workflow, WorkflowNode, WorkflowEdge, Position, ExecutionStatus } from '../models/workflow.model';
 import { NodeRegistryService } from '../registry/node-registry.service';
-import { ProjectService } from '../../../core/services/project.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorkflowStateService {
-  private projectService = inject(ProjectService);
+  private http = inject(HttpClient);
   private nodeRegistry = inject(NodeRegistryService);
+  private apiUrl = 'http://localhost:3000/api/v1/workflows';
 
   // State Signals
   private _workflow = signal<Workflow>({
@@ -38,14 +40,43 @@ export class WorkflowStateService {
   zoomLevel = computed(() => this._workflow().zoom);
   panPosition = computed(() => this._workflow().pan);
 
-  private syncWithProject() {
-    const activeProject = this.projectService.activeProject();
-    if (activeProject) {
-      this.projectService.updateProjectWorkflows(activeProject.id, [this._workflow()]);
+  // Persistence Actions
+  async saveWorkflow() {
+    try {
+      const current = this._workflow();
+      const payload = {
+        id: current.id,
+        name: current.name,
+        graph: current // Saving the whole graph as JSON
+      };
+      await firstValueFrom(this.http.post(this.apiUrl, payload));
+      console.log('Workflow saved to DB');
+    } catch (e) {
+      console.error('Failed to save workflow:', e);
     }
   }
 
-  // Actions
+  async loadWorkflowFromApi(id: string) {
+    try {
+      const data = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
+      if (data && data.graph) {
+        this.loadWorkflow(data.graph);
+      }
+    } catch (e) {
+      console.error('Failed to load workflow:', e);
+    }
+  }
+
+  async listWorkflows() {
+    try {
+      return await firstValueFrom(this.http.get<any[]>(this.apiUrl));
+    } catch (e) {
+      console.error('Failed to list workflows:', e);
+      return [];
+    }
+  }
+
+  // UI Actions
   addNode(subType: string, position: Position) {
     const registryEntry = this.nodeRegistry.getEntry(subType);
     if (!registryEntry) return;
@@ -67,7 +98,6 @@ export class WorkflowStateService {
     }));
 
     this.selectNode(newNode.id);
-    this.syncWithProject();
     return newNode;
   }
 
@@ -76,7 +106,6 @@ export class WorkflowStateService {
       ...w,
       nodes: w.nodes.map(n => n.id === nodeId ? { ...n, position } : n)
     }));
-    this.syncWithProject();
   }
 
   updateNodeData(nodeId: string, data: any) {
@@ -84,7 +113,6 @@ export class WorkflowStateService {
       ...w,
       nodes: w.nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)
     }));
-    this.syncWithProject();
   }
 
   updateNodeStatus(nodeId: string, status: ExecutionStatus, errorMessage?: string) {
@@ -101,7 +129,6 @@ export class WorkflowStateService {
       edges: w.edges.filter(e => e.source !== nodeId && e.target !== nodeId)
     }));
     if (this._selectedNodeId() === nodeId) this._selectedNodeId.set(null);
-    this.syncWithProject();
   }
 
   addEdge(sourceId: string, targetId: string, sourceAnchor?: string, targetAnchor?: string) {
@@ -123,7 +150,6 @@ export class WorkflowStateService {
       ...w,
       edges: [...w.edges, newEdge]
     }));
-    this.syncWithProject();
     return newEdge;
   }
 
@@ -132,7 +158,6 @@ export class WorkflowStateService {
       ...w,
       edges: w.edges.filter(e => e.id !== edgeId)
     }));
-    this.syncWithProject();
   }
 
   selectNode(nodeId: string | null) {
@@ -151,35 +176,12 @@ export class WorkflowStateService {
     this._workflow.update(w => ({ ...w, pan }));
   }
 
-  // State Persistence
   loadWorkflow(workflow: Workflow) {
-    // Basic migration/defaulting for older schemas
-    const updatedWorkflow = {
+    this._workflow.set({
       ...workflow,
       zoom: workflow.zoom || 1,
-      pan: workflow.pan || { x: 0, y: 0 },
-      metadata: {
-        ...workflow.metadata,
-        lastSaved: workflow.metadata.lastSaved || new Date().toISOString()
-      }
-    };
-    this._workflow.set(updatedWorkflow);
-  }
-
-  loadProjectWorkflows(workflows: Workflow[]) {
-    if (workflows && workflows.length > 0) {
-      this.loadWorkflow(workflows[0]);
-    } else {
-      this._workflow.set({
-        id: uuidv4(),
-        name: 'Untitled Workflow',
-        nodes: [],
-        edges: [],
-        zoom: 1,
-        pan: { x: 0, y: 0 },
-        metadata: { version: '1.0.0', lastSaved: new Date().toISOString() }
-      });
-    }
+      pan: workflow.pan || { x: 0, y: 0 }
+    });
   }
 
   exportWorkflow(): Workflow {

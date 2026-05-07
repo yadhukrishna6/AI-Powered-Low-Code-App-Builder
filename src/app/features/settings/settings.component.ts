@@ -134,8 +134,8 @@ import { FormsModule } from '@angular/forms';
 })
 export class SettingsComponent {
   clearAll() {
-    if (confirm('This will permanently delete ALL projects. Are you sure?')) {
-      localStorage.removeItem('flowforge_projects');
+    if (confirm('This will permanently delete ALL local cache. Are you sure?')) {
+      localStorage.clear();
       window.location.reload();
     }
   }
