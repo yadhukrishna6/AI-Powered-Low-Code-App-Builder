@@ -1,4 +1,5 @@
 export type WorkflowNodeType = 'trigger' | 'logic' | 'action';
+export type ExecutionStatus = 'idle' | 'running' | 'success' | 'error' | 'skipped' | 'waiting';
 
 export interface Position {
   x: number;
@@ -12,17 +13,19 @@ export interface WorkflowNode<T = any> {
   label: string;
   position: Position;
   data: T;
-  status?: 'idle' | 'running' | 'success' | 'error';
+  status: ExecutionStatus;
   errorMessage?: string;
+  lastExecuted?: Date;
 }
 
 export interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
+  sourceAnchor?: string; // e.g., 'true', 'false', 'default'
+  targetAnchor?: string;
   label?: string;
-  type?: string;
-  data?: any;
+  type?: 'default' | 'success' | 'failure' | 'conditional';
 }
 
 export interface Workflow {
@@ -30,25 +33,32 @@ export interface Workflow {
   name: string;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  zoom: number;
+  pan: Position;
   metadata: {
     version: string;
-    lastSaved: Date;
+    lastSaved: string; // ISO string for easier JSON serialization
     createdBy?: string;
+    description?: string;
   };
 }
 
 export interface WorkflowExecutionContext {
   workflowId: string;
+  instanceId: string; // unique ID for this specific run
   variables: Record<string, any>;
-  executionPath: string[];
-  currentNodeId?: string;
+  history: NodeExecutionResult[];
   status: 'active' | 'completed' | 'failed' | 'suspended';
+  startTime: Date;
+  endTime?: Date;
 }
 
 export interface NodeExecutionResult {
   nodeId: string;
+  timestamp: Date;
   success: boolean;
+  input?: any;
   output?: any;
   error?: string;
-  nextNodes?: string[]; // IDs of nodes to proceed to (for branching)
+  duration?: number; // ms
 }

@@ -26,6 +26,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
               class="palette-item"
               [cdkDragData]="field.type"
               cdkDrag
+              cdkDragPreviewContainer="global"
             >
               <div class="item-icon-wrapper">
                 <span class="icon">{{ field.icon }}</span>

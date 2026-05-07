@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Workflow, WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
-import { NODE_REGISTRY } from '../registry/node-registry';
+import { Workflow, WorkflowNode, WorkflowEdge, Position, ExecutionStatus } from '../models/workflow.model';
+import { NodeRegistryService } from '../registry/node-registry.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,23 +9,24 @@ import { v4 as uuidv4 } from 'uuid';
 })
 export class WorkflowStateService {
   private projectService = inject(ProjectService);
+  private nodeRegistry = inject(NodeRegistryService);
+
   // State Signals
   private _workflow = signal<Workflow>({
     id: uuidv4(),
     name: 'Untitled Workflow',
     nodes: [],
     edges: [],
+    zoom: 1,
+    pan: { x: 0, y: 0 },
     metadata: {
       version: '1.0.0',
-      lastSaved: new Date()
+      lastSaved: new Date().toISOString()
     }
   });
 
   private _selectedNodeId = signal<string | null>(null);
   private _selectedEdgeId = signal<string | null>(null);
-  private _isDragging = signal<boolean>(false);
-  private _zoomLevel = signal<number>(1);
-  private _panPosition = signal<Position>({ x: 0, y: 0 });
 
   // Selectors
   workflow = computed(() => this._workflow());
@@ -34,8 +35,8 @@ export class WorkflowStateService {
   selectedNode = computed(() => 
     this._workflow().nodes.find(n => n.id === this._selectedNodeId()) || null
   );
-  zoomLevel = computed(() => this._zoomLevel());
-  panPosition = computed(() => this._panPosition());
+  zoomLevel = computed(() => this._workflow().zoom);
+  panPosition = computed(() => this._workflow().pan);
 
   private syncWithProject() {
     const activeProject = this.projectService.activeProject();
@@ -46,7 +47,7 @@ export class WorkflowStateService {
 
   // Actions
   addNode(subType: string, position: Position) {
-    const registryEntry = NODE_REGISTRY[subType];
+    const registryEntry = this.nodeRegistry.getEntry(subType);
     if (!registryEntry) return;
 
     const newNode: WorkflowNode = {
@@ -61,11 +62,13 @@ export class WorkflowStateService {
 
     this._workflow.update(w => ({
       ...w,
-      nodes: [...w.nodes, newNode]
+      nodes: [...w.nodes, newNode],
+      metadata: { ...w.metadata, lastSaved: new Date().toISOString() }
     }));
 
     this.selectNode(newNode.id);
     this.syncWithProject();
+    return newNode;
   }
 
   updateNodePosition(nodeId: string, position: Position) {
@@ -84,6 +87,13 @@ export class WorkflowStateService {
     this.syncWithProject();
   }
 
+  updateNodeStatus(nodeId: string, status: ExecutionStatus, errorMessage?: string) {
+    this._workflow.update(w => ({
+      ...w,
+      nodes: w.nodes.map(n => n.id === nodeId ? { ...n, status, errorMessage } : n)
+    }));
+  }
+
   removeNode(nodeId: string) {
     this._workflow.update(w => ({
       ...w,
@@ -94,16 +104,19 @@ export class WorkflowStateService {
     this.syncWithProject();
   }
 
-  addEdge(sourceId: string, targetId: string) {
+  addEdge(sourceId: string, targetId: string, sourceAnchor?: string, targetAnchor?: string) {
     const exists = this._workflow().edges.some(
-      e => e.source === sourceId && e.target === targetId
+      e => e.source === sourceId && e.target === targetId && e.sourceAnchor === sourceAnchor
     );
     if (exists || sourceId === targetId) return;
 
     const newEdge: WorkflowEdge = {
       id: `edge_${uuidv4().substring(0, 8)}`,
       source: sourceId,
-      target: targetId
+      target: targetId,
+      sourceAnchor,
+      targetAnchor,
+      type: 'default'
     };
 
     this._workflow.update(w => ({
@@ -111,6 +124,7 @@ export class WorkflowStateService {
       edges: [...w.edges, newEdge]
     }));
     this.syncWithProject();
+    return newEdge;
   }
 
   removeEdge(edgeId: string) {
@@ -126,35 +140,45 @@ export class WorkflowStateService {
     this._selectedEdgeId.set(null);
   }
 
-  setZoom(level: number) {
-    this._zoomLevel.set(Math.max(0.1, Math.min(2, level)));
+  setZoom(zoom: number) {
+    this._workflow.update(w => ({
+      ...w,
+      zoom: Math.max(0.1, Math.min(2, zoom))
+    }));
   }
 
-  setPan(position: Position) {
-    this._panPosition.set(position);
+  setPan(pan: Position) {
+    this._workflow.update(w => ({ ...w, pan }));
   }
 
   // State Persistence
   loadWorkflow(workflow: Workflow) {
-    this._workflow.set(JSON.parse(JSON.stringify(workflow)));
+    // Basic migration/defaulting for older schemas
+    const updatedWorkflow = {
+      ...workflow,
+      zoom: workflow.zoom || 1,
+      pan: workflow.pan || { x: 0, y: 0 },
+      metadata: {
+        ...workflow.metadata,
+        lastSaved: workflow.metadata.lastSaved || new Date().toISOString()
+      }
+    };
+    this._workflow.set(updatedWorkflow);
   }
 
   loadProjectWorkflows(workflows: Workflow[]) {
     if (workflows && workflows.length > 0) {
       this.loadWorkflow(workflows[0]);
     } else {
-      // Reset to empty if no workflows
       this._workflow.set({
         id: uuidv4(),
         name: 'Untitled Workflow',
         nodes: [],
         edges: [],
-        metadata: { version: '1.0.0', lastSaved: new Date() }
+        zoom: 1,
+        pan: { x: 0, y: 0 },
+        metadata: { version: '1.0.0', lastSaved: new Date().toISOString() }
       });
     }
-  }
-
-  exportWorkflow(): Workflow {
-    return this._workflow();
   }
 }
