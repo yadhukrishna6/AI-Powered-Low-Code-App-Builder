@@ -30,11 +30,20 @@ export class ProjectService {
 
   async loadProjects() {
     try {
+      console.log('Fetching all projects from:', this.apiUrl);
       const projects = await firstValueFrom(this.http.get<any[]>(this.apiUrl));
-      this.projectsSignal.set(projects.map(p => ({
+      console.log('Raw projects received:', projects);
+      
+      const mapped = projects.map(p => ({
         ...p,
         lastModified: new Date(p.updatedAt || p.createdAt)
-      })));
+      }));
+      
+      this.projectsSignal.set(mapped);
+      console.log('Projects signal updated with count:', mapped.length);
+      if (mapped.length > 0) {
+        console.log('First project forms count:', mapped[0].forms?.length || 0);
+      }
     } catch (e) {
       console.error('Failed to load projects:', e);
     }
@@ -46,6 +55,23 @@ export class ProjectService {
 
   setActiveProject(id: string | null) {
     this.activeProjectIdSignal.set(id);
+  }
+
+  updateProjectInSignal(project: any) {
+    const formatted = {
+      ...project,
+      lastModified: new Date(project.updatedAt || project.createdAt)
+    };
+    
+    this.projectsSignal.update(projects => {
+      const index = projects.findIndex(p => p.id === project.id);
+      if (index >= 0) {
+        const newProjects = [...projects];
+        newProjects[index] = formatted;
+        return newProjects;
+      }
+      return [...projects, formatted];
+    });
   }
 
   async addProject(name: string, description: string = ''): Promise<Project> {

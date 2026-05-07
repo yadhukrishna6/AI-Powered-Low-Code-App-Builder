@@ -206,11 +206,50 @@ export class WorkflowBuilderComponent implements OnInit {
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      await this.projectService.loadProjects();
-      this.projectService.setActiveProject(id);
-      // Load workflow from API
-      this.state.loadWorkflowFromApi(id);
+    if (!id) return;
+
+    // Check if the URL contains 'project/' to determine if this is a project ID
+    const isProjectScoped = this.route.snapshot.url.some(segment => segment.path === 'project') || 
+                           window.location.pathname.includes('/project/');
+
+    console.log(`Initializing Workflow Builder (${isProjectScoped ? 'Project' : 'Workflow'} mode) for ID:`, id);
+    
+    let loaded = false;
+
+    if (isProjectScoped) {
+      // 1. In project mode, always look for the project's workflow first
+      const existingWorkflowId = await this.state.loadWorkflowByProject(id);
+      if (existingWorkflowId) {
+        loaded = true;
+      } else {
+        // 2. Auto-create if project has no workflow
+        console.log('No workflow found for project. Creating first automation flow...');
+        await this.state.createWorkflow(id, 'Automation Flow');
+        loaded = true;
+      }
+    } else {
+      // 3. Direct Workflow ID mode
+      loaded = await this.state.loadWorkflowFromApi(id);
+    }
+
+    if (!loaded) {
+      console.error('Failed to load or initialize workflow for ID:', id);
+      return;
+    }
+
+    // 4. Finalize project context (load forms/metadata)
+    const workflow = this.state.workflow();
+    const projectId = (workflow as any).projectId || id;
+
+    if (projectId) {
+      try {
+        const fullProject = await this.projectService.getProject(projectId);
+        this.projectService.updateProjectInSignal(fullProject);
+        this.projectService.setActiveProject(projectId);
+        console.log('Project context synchronized successfully.');
+      } catch (e) {
+        console.warn('Project details could not be fetched, continuing with basic context.');
+      }
     }
   }
 

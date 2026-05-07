@@ -1,7 +1,9 @@
-import { WorkflowsService } from './workflows.service';
-export declare class WorkflowsController {
-    private readonly workflowsService;
-    constructor(workflowsService: WorkflowsService);
+import { PrismaService } from '../prisma/prisma.service';
+import { WorkflowRuntimeService } from './runtime/workflow-runtime.service';
+export declare class WorkflowsService {
+    private prisma;
+    private runtime;
+    constructor(prisma: PrismaService, runtime: WorkflowRuntimeService);
     create(data: any): Promise<{
         name: string;
         projectId: string | null;
@@ -68,7 +70,7 @@ export declare class WorkflowsController {
         graph: import("@prisma/client/runtime/library").JsonValue;
         version: number;
     }>;
-    execute(id: string, context: any): Promise<{
+    createExecution(workflowId: string, triggerSource: string, context: any): Promise<{
         id: string;
         result: import("@prisma/client/runtime/library").JsonValue | null;
         status: string;
@@ -78,7 +80,7 @@ export declare class WorkflowsController {
         startTime: Date;
         endTime: Date | null;
     }>;
-    getExecution(id: string): Promise<({
+    getExecution(executionId: string): Promise<({
         logs: {
             error: string | null;
             id: string;

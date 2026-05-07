@@ -14,40 +14,32 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkflowsController = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../prisma/prisma.service");
+const workflows_service_1 = require("./workflows.service");
 let WorkflowsController = class WorkflowsController {
-    prisma;
-    constructor(prisma) {
-        this.prisma = prisma;
+    workflowsService;
+    constructor(workflowsService) {
+        this.workflowsService = workflowsService;
     }
     create(data) {
-        return this.prisma.workflow.create({
-            data: {
-                name: data.name,
-                graph: data.graph,
-                status: data.status || 'draft',
-                projectId: data.projectId
-            }
-        });
+        return this.workflowsService.create(data);
     }
-    findAll() {
-        return this.prisma.workflow.findMany();
+    findAll(projectId) {
+        return this.workflowsService.findAll(projectId);
     }
     findOne(id) {
-        return this.prisma.workflow.findUnique({
-            where: { id }
-        });
+        return this.workflowsService.findOne(id);
     }
     update(id, data) {
-        return this.prisma.workflow.update({
-            where: { id },
-            data
-        });
+        return this.workflowsService.update(id, data);
     }
     remove(id) {
-        return this.prisma.workflow.delete({
-            where: { id }
-        });
+        return this.workflowsService.remove(id);
+    }
+    execute(id, context) {
+        return this.workflowsService.createExecution(id, 'manual', context);
+    }
+    getExecution(id) {
+        return this.workflowsService.getExecution(id);
     }
 };
 exports.WorkflowsController = WorkflowsController;
@@ -60,8 +52,9 @@ __decorate([
 ], WorkflowsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('projectId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], WorkflowsController.prototype, "findAll", null);
 __decorate([
@@ -86,8 +79,23 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], WorkflowsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/execute'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], WorkflowsController.prototype, "execute", null);
+__decorate([
+    (0, common_1.Get)('executions/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], WorkflowsController.prototype, "getExecution", null);
 exports.WorkflowsController = WorkflowsController = __decorate([
     (0, common_1.Controller)('workflows'),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [workflows_service_1.WorkflowsService])
 ], WorkflowsController);
 //# sourceMappingURL=workflows.controller.js.map

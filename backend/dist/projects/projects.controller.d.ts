@@ -16,6 +16,14 @@ export declare class ProjectsController {
             forms: number;
             workflows: number;
         };
+        forms: {
+            name: string;
+            schema: import("@prisma/client/runtime/library").JsonValue;
+            projectId: string | null;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
     } & {
         name: string;
         id: string;
@@ -40,8 +48,10 @@ export declare class ProjectsController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            description: string | null;
             status: string;
             graph: import("@prisma/client/runtime/library").JsonValue;
+            version: number;
         }[];
     } & {
         name: string;

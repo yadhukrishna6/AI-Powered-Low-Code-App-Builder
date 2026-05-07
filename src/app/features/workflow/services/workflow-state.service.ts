@@ -14,13 +14,14 @@ export class WorkflowStateService {
   private apiUrl = 'http://localhost:3000/api/v1/workflows';
 
   // State Signals
-  private _workflow = signal<Workflow>({
+  private _workflow = signal<Workflow & { projectId?: string }>({
     id: uuidv4(),
     name: 'Untitled Workflow',
     nodes: [],
     edges: [],
     zoom: 1,
     pan: { x: 0, y: 0 },
+    projectId: '',
     metadata: {
       version: '1.0.0',
       lastSaved: new Date().toISOString()
@@ -41,6 +42,22 @@ export class WorkflowStateService {
   panPosition = computed(() => this._workflow().pan);
 
   // Persistence Actions
+  async createWorkflow(projectId: string, name: string = 'Main Workflow') {
+    try {
+      const payload = {
+        name,
+        projectId,
+        graph: this._workflow()
+      };
+      const created = await firstValueFrom(this.http.post<any>(this.apiUrl, payload));
+      this.loadWorkflow(created.graph, projectId);
+      return created.id;
+    } catch (e) {
+      console.error('Failed to create workflow:', e);
+      return null;
+    }
+  }
+
   async saveWorkflow() {
     try {
       const current = this._workflow();
@@ -60,10 +77,28 @@ export class WorkflowStateService {
     try {
       const data = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
       if (data && data.graph) {
-        this.loadWorkflow(data.graph);
+        this.loadWorkflow(data.graph, data.projectId);
+        return true;
       }
+      return false;
     } catch (e) {
       console.error('Failed to load workflow:', e);
+      return false;
+    }
+  }
+
+  async loadWorkflowByProject(projectId: string) {
+    try {
+      const workflows = await firstValueFrom(this.http.get<any[]>(`${this.apiUrl}?projectId=${projectId}`));
+      if (workflows && workflows.length > 0) {
+        const first = workflows[0];
+        this.loadWorkflow(first.graph, projectId);
+        return first.id;
+      }
+      return null;
+    } catch (e) {
+      console.error('Failed to load workflow by project:', e);
+      return null;
     }
   }
 
@@ -176,9 +211,10 @@ export class WorkflowStateService {
     this._workflow.update(w => ({ ...w, pan }));
   }
 
-  loadWorkflow(workflow: Workflow) {
+  loadWorkflow(workflow: Workflow, projectId?: string) {
     this._workflow.set({
       ...workflow,
+      projectId: projectId || (workflow as any).projectId,
       zoom: workflow.zoom || 1,
       pan: workflow.pan || { x: 0, y: 0 }
     });

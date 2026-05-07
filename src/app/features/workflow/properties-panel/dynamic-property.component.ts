@@ -19,6 +19,7 @@ import { ProjectService } from '../../../core/services/project.service';
                 (ngModelChange)="onChanged()">
           <option value="">-- Select a Form --</option>
           <option *ngFor="let form of projectForms()" [value]="form.id">{{ form.name }}</option>
+          <option *ngIf="projectForms().length === 0" disabled>No forms found in project</option>
         </select>
 
         <!-- Text Input -->
