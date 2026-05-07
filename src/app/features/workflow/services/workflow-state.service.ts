@@ -181,4 +181,8 @@ export class WorkflowStateService {
       });
     }
   }
+
+  exportWorkflow(): Workflow {
+    return this._workflow();
+  }
 }

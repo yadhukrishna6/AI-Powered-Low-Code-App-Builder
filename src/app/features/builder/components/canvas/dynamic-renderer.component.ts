@@ -1,13 +1,14 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FormField, FieldType } from '../../../../core/models/form.model';
+import { FormsModule } from '@angular/forms';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
 
 @Component({
   selector: 'app-dynamic-renderer',
   standalone: true,
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, DragDropModule, FormsModule],
   host: {
     '[style.grid-column]': "'span ' + (field.layout?.span || 12)"
   },
@@ -32,58 +33,61 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
           <!-- Text / Email / Number -->
           <div *ngSwitchCase="'text'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <input type="text" [placeholder]="field.placeholder || ''" disabled class="preview-input">
-          </div>
-
-          <div *ngSwitchCase="'password'" class="preview-group">
-            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <div class="password-wrapper">
-              <input type="password" value="********" disabled class="preview-input">
-              <span class="pw-icon">👁️</span>
-            </div>
-          </div>
-
-          <div *ngSwitchCase="'email'" class="preview-group">
-            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <input type="email" [placeholder]="field.placeholder || ''" disabled class="preview-input">
-          </div>
-
-          <div *ngSwitchCase="'number'" class="preview-group">
-            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <input type="number" [placeholder]="field.placeholder || ''" disabled class="preview-input">
-          </div>
-
-          <div *ngSwitchCase="'textarea'" class="preview-group">
-            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <textarea [placeholder]="field.placeholder || ''" disabled class="preview-input preview-textarea"></textarea>
+            <input 
+              type="text" 
+              [placeholder]="field.placeholder || ''" 
+              [disabled]="!isRuntime" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input"
+            >
           </div>
 
           <div *ngSwitchCase="'select'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <select disabled class="preview-input">
-              <option>{{ field.placeholder || 'Select an option...' }}</option>
-              <option *ngFor="let opt of field.props?.options">{{ opt }}</option>
+            <select 
+              [disabled]="!isRuntime" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input"
+            >
+              <option value="" disabled>{{ field.placeholder || 'Select an option...' }}</option>
+              <option *ngFor="let opt of field.props?.options || field.options" [value]="opt">{{ opt }}</option>
             </select>
-          </div>
-
-          <div *ngSwitchCase="'radio'" class="preview-group">
-            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <div class="radio-group">
-              <label *ngFor="let opt of field.props?.options" class="radio-item">
-                <input type="radio" disabled> <span>{{ opt }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div *ngSwitchCase="'checkbox'" class="preview-group">
-            <label class="checkbox-item">
-              <input type="checkbox" disabled> <span>{{ field.label }}</span>
-            </label>
           </div>
 
           <div *ngSwitchCase="'date'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
-            <input type="date" disabled class="preview-input">
+            <input 
+              type="date" 
+              [disabled]="!isRuntime" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input"
+            >
+          </div>
+
+          <div *ngSwitchCase="'number'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <input 
+              type="number" 
+              [placeholder]="field.placeholder || ''" 
+              [disabled]="!isRuntime || field.readonly" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input"
+            >
+          </div>
+
+          <div *ngSwitchCase="'textarea'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <textarea 
+              [placeholder]="field.placeholder || ''" 
+              [disabled]="!isRuntime" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input preview-textarea"
+            ></textarea>
           </div>
 
           <div *ngSwitchCase="'time'" class="preview-group">
@@ -326,10 +330,17 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
 })
 export class DynamicRendererComponent {
   @Input() field!: FormField;
+  @Input() isRuntime = false;
+  @Output() fieldChange = new EventEmitter<{ fieldId: string, value: any }>();
 
   service = inject(FormBuilderService);
 
+  onValueChange(value: any) {
+    this.fieldChange.emit({ fieldId: this.field.id, value });
+  }
+
   selectField(event: MouseEvent) {
+    if (this.isRuntime) return;
     event.stopPropagation();
     this.service.selectField(this.field.id);
   }

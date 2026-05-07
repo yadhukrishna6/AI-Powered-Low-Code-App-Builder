@@ -74,13 +74,30 @@ export class WorkflowRuntimeService {
       context.history.push(result);
       this.executionEvents$.next(result);
 
-      // Find next nodes via edges
-      const outgoingEdges = workflow.edges.filter(e => e.source === node.id);
+      // Branching logic for 'condition' nodes
+      let outgoingEdges = workflow.edges.filter(e => e.source === node.id);
+      
+      if (node.subType === 'condition') {
+        const conditionResult = this.evaluateCondition(node, context);
+        // If true, follow the 'true' branch (we'll assume the first edge is true for simplicity, 
+        // or match by targetAnchor if implemented)
+        if (conditionResult) {
+          outgoingEdges = outgoingEdges.filter(e => e.targetAnchor === 'true' || outgoingEdges.indexOf(e) === 0);
+        } else {
+          outgoingEdges = outgoingEdges.filter(e => e.targetAnchor === 'false' || outgoingEdges.indexOf(e) === 1);
+        }
+      }
+
+      // Handle 'approval' nodes (pause execution)
+      if (node.subType === 'approval') {
+        this.state.updateNodeStatus(node.id, 'waiting');
+        console.log('Workflow paused: Waiting for approval at', node.id);
+        return; // Pause traversal
+      }
       
       for (const edge of outgoingEdges) {
         const nextNode = workflow.nodes.find(n => n.id === edge.target);
         if (nextNode) {
-          // In a real engine, we might check condition edge logic here
           await this.executeNode(nextNode, workflow, context);
         }
       }
@@ -100,6 +117,29 @@ export class WorkflowRuntimeService {
       this.executionEvents$.next(result);
       context.status = 'failed';
     }
+  }
+
+  private evaluateCondition(node: WorkflowNode, context: WorkflowExecutionContext): boolean {
+    const { variable, operator, value } = node.data;
+    const actualValue = context.variables[variable] || 0;
+    
+    switch (operator) {
+      case 'gt': return actualValue > value;
+      case 'lt': return actualValue < value;
+      case 'eq': return actualValue === value;
+      default: return !!actualValue;
+    }
+  }
+
+  // Resume a paused workflow (e.g. after approval)
+  async resumeWorkflow(nodeId: string, action: 'approve' | 'reject') {
+    const context = this.activeExecutionContext();
+    if (!context || context.status !== 'active') return;
+
+    // In a real engine, we'd load the full workflow object
+    // For now, we assume it's the active one
+    // We'll implement this bridge in the next step
+    console.log(`Workflow resumed at ${nodeId} with action: ${action}`);
   }
 
   private async simulateNodeExecution(node: WorkflowNode) {

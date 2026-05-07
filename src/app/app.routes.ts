@@ -56,6 +56,14 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
+      },
+      {
+        path: 'runtime/app/:id',
+        loadComponent: () => import('./features/runtime/runtime-app.component').then(m => m.RuntimeAppComponent)
+      },
+      {
+        path: 'project/:id/logs',
+        loadComponent: () => import('./features/workflow/execution/execution-logs.component').then(m => m.ExecutionLogsComponent)
       }
     ]
   }

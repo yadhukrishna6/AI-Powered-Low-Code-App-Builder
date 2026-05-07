@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { SideNavComponent } from '../../features/builder/components/side-nav/side-nav.component';
-import { FormBuilderService } from '../../core/services/form-builder.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-shell-layout',
@@ -132,7 +132,7 @@ import { FormBuilderService } from '../../core/services/form-builder.service';
   `]
 })
 export class ShellLayoutComponent {
-  themeService = inject(FormBuilderService);
+  themeService = inject(ThemeService);
   router = inject(Router);
 
   getPageTitle(): string {

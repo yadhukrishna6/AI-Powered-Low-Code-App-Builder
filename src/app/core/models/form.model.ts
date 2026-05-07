@@ -9,6 +9,9 @@ export interface FormField {
   name: string;
   required: boolean;
   placeholder?: string;
+  defaultValue?: any;
+  readonly?: boolean;
+  options?: string[]; // Added for convenience in select/radio
   props?: any;
   validation?: {
     minLength?: number;
@@ -24,6 +27,7 @@ export interface FormField {
 
 export interface FormSchema {
   fields: FormField[];
+  layout?: any;
 }
 
 export interface DraggableFieldType {
