@@ -9,6 +9,7 @@ import { ApiRequestHandler } from './runtime/handlers/api-request.handler';
 import { NotificationHandler } from './runtime/handlers/notification.handler';
 import { SaveDataHandler } from './runtime/handlers/save-data.handler';
 import { TransformHandler } from './runtime/handlers/transform.handler';
+import { ApprovalHandler } from './runtime/handlers/approval.handler';
 
 @Module({
   imports: [PrismaModule],
@@ -21,7 +22,8 @@ import { TransformHandler } from './runtime/handlers/transform.handler';
     ApiRequestHandler,
     NotificationHandler,
     SaveDataHandler,
-    TransformHandler
+    TransformHandler,
+    ApprovalHandler
   ],
   exports: [WorkflowsService, WorkflowRuntimeService],
 })
@@ -33,7 +35,8 @@ export class WorkflowsModule implements OnModuleInit {
     private apiHandler: ApiRequestHandler,
     private notificationHandler: NotificationHandler,
     private saveDataHandler: SaveDataHandler,
-    private transformHandler: TransformHandler
+    private transformHandler: TransformHandler,
+    private approvalHandler: ApprovalHandler
   ) {}
 
   onModuleInit() {
@@ -44,6 +47,7 @@ export class WorkflowsModule implements OnModuleInit {
     this.runtime.registerHandler('send-notification', this.notificationHandler);
     this.runtime.registerHandler('save-data', this.saveDataHandler);
     this.runtime.registerHandler('transform', this.transformHandler);
+    this.runtime.registerHandler('approval', this.approvalHandler);
     this.runtime.registerHandler('end', this.startHandler); // Reuse start for end as well for now
   }
 }

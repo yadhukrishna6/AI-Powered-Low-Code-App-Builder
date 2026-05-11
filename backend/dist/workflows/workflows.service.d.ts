@@ -102,4 +102,7 @@ export declare class WorkflowsService {
         startTime: Date;
         endTime: Date | null;
     }) | null>;
+    resumeExecution(executionId: string, action: 'approve' | 'reject'): Promise<{
+        message: string;
+    }>;
 }

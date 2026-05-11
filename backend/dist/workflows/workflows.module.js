@@ -21,6 +21,7 @@ const api_request_handler_1 = require("./runtime/handlers/api-request.handler");
 const notification_handler_1 = require("./runtime/handlers/notification.handler");
 const save_data_handler_1 = require("./runtime/handlers/save-data.handler");
 const transform_handler_1 = require("./runtime/handlers/transform.handler");
+const approval_handler_1 = require("./runtime/handlers/approval.handler");
 let WorkflowsModule = class WorkflowsModule {
     runtime;
     startHandler;
@@ -29,7 +30,8 @@ let WorkflowsModule = class WorkflowsModule {
     notificationHandler;
     saveDataHandler;
     transformHandler;
-    constructor(runtime, startHandler, conditionHandler, apiHandler, notificationHandler, saveDataHandler, transformHandler) {
+    approvalHandler;
+    constructor(runtime, startHandler, conditionHandler, apiHandler, notificationHandler, saveDataHandler, transformHandler, approvalHandler) {
         this.runtime = runtime;
         this.startHandler = startHandler;
         this.conditionHandler = conditionHandler;
@@ -37,6 +39,7 @@ let WorkflowsModule = class WorkflowsModule {
         this.notificationHandler = notificationHandler;
         this.saveDataHandler = saveDataHandler;
         this.transformHandler = transformHandler;
+        this.approvalHandler = approvalHandler;
     }
     onModuleInit() {
         this.runtime.registerHandler('start', this.startHandler);
@@ -46,6 +49,7 @@ let WorkflowsModule = class WorkflowsModule {
         this.runtime.registerHandler('send-notification', this.notificationHandler);
         this.runtime.registerHandler('save-data', this.saveDataHandler);
         this.runtime.registerHandler('transform', this.transformHandler);
+        this.runtime.registerHandler('approval', this.approvalHandler);
         this.runtime.registerHandler('end', this.startHandler);
     }
 };
@@ -62,7 +66,8 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             api_request_handler_1.ApiRequestHandler,
             notification_handler_1.NotificationHandler,
             save_data_handler_1.SaveDataHandler,
-            transform_handler_1.TransformHandler
+            transform_handler_1.TransformHandler,
+            approval_handler_1.ApprovalHandler
         ],
         exports: [workflows_service_1.WorkflowsService, workflow_runtime_service_1.WorkflowRuntimeService],
     }),
@@ -72,6 +77,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         api_request_handler_1.ApiRequestHandler,
         notification_handler_1.NotificationHandler,
         save_data_handler_1.SaveDataHandler,
-        transform_handler_1.TransformHandler])
+        transform_handler_1.TransformHandler,
+        approval_handler_1.ApprovalHandler])
 ], WorkflowsModule);
 //# sourceMappingURL=workflows.module.js.map

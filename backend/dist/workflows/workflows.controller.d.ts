@@ -100,4 +100,9 @@ export declare class WorkflowsController {
         startTime: Date;
         endTime: Date | null;
     }) | null>;
+    resumeExecution(id: string, body: {
+        action: 'approve' | 'reject';
+    }): Promise<{
+        message: string;
+    }>;
 }

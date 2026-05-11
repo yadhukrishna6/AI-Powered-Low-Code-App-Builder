@@ -290,27 +290,32 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
   private renderedEdgeIds = new Set<string>();
 
   constructor() {
-    // Sync nodes with state
+    // Consolidated sync logic: Ensure nodes are added BEFORE edges are connected
     effect(() => {
-      const currentNodes = this.state.nodes();
-      const currentIds = new Set(currentNodes.map(n => n.id));
-
-      this.previousNodeIds.forEach(id => {
-        if (!currentIds.has(id)) this.graph.removeNode(id);
-      });
-
+      const nodes = this.state.nodes();
+      const edges = this.state.edges();
+      
+      // We use a small timeout to ensure Angular has finished rendering the DOM nodes
       setTimeout(() => {
-        currentNodes.forEach(node => {
-          if (!this.previousNodeIds.has(node.id)) this.graph.addNode(node.id);
+        // 1. Sync Nodes
+        const currentIds = new Set(nodes.map(n => n.id));
+        
+        // Remove old nodes
+        this.previousNodeIds.forEach(id => {
+          if (!currentIds.has(id)) this.graph.removeNode(id);
+        });
+
+        // Add new nodes
+        nodes.forEach(node => {
+          if (!this.previousNodeIds.has(node.id)) {
+            this.graph.addNode(node.id);
+          }
         });
         this.previousNodeIds = currentIds;
-      }, 0);
-    });
 
-    // Sync edges with state
-    effect(() => {
-      const edges = this.state.edges();
-      setTimeout(() => this.syncEdgesWithGraph(edges), 0);
+        // 2. Sync Edges (after nodes are guaranteed to be in the DOM and jsPlumb)
+        this.syncEdgesWithGraph(edges);
+      }, 0);
     });
   }
 

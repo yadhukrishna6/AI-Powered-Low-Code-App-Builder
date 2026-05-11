@@ -9,4 +9,5 @@ export declare class WorkflowRuntimeService {
     run(executionId: string): Promise<void>;
     private logNode;
     private updateExecutionStatus;
+    resume(executionId: string, action: 'approve' | 'reject'): Promise<void>;
 }

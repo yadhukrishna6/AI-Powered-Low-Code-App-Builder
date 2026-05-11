@@ -67,7 +67,12 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
                     break;
                 let edge;
                 if (result.nextPath) {
-                    edge = edges.find((e) => e.sourceHandle === result.nextPath);
+                    edge = edges.find((e) => e.sourceHandle === result.nextPath || e.sourceAnchor === result.nextPath);
+                    if (!edge) {
+                        await this.logNode(executionId, currentNode, 'failed', null, null, `No outgoing edge found for branch ${result.nextPath}`);
+                        await this.updateExecutionStatus(executionId, 'failed', context.variables);
+                        return;
+                    }
                 }
                 else {
                     edge = edges[0];
@@ -107,6 +112,73 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
                 endTime: status === 'success' || status === 'failed' ? new Date() : null
             },
         });
+    }
+    async resume(executionId, action) {
+        const execution = await this.prisma.workflowExecution.findUnique({
+            where: { id: executionId },
+            include: { workflow: true },
+        });
+        if (!execution || execution.status !== 'waiting')
+            return;
+        const graph = execution.workflow.graph;
+        const context = {
+            executionId,
+            workflowId: execution.workflowId,
+            variables: { ...execution.context, resumeAction: action },
+        };
+        const lastLog = await this.prisma.workflowLog.findFirst({
+            where: { executionId, status: 'waiting' },
+            orderBy: { timestamp: 'desc' },
+        });
+        if (!lastLog)
+            return;
+        let currentNode = graph.nodes.find((n) => n.id === lastLog.nodeId);
+        if (!currentNode)
+            return;
+        while (currentNode) {
+            this.logger.log(`Resuming node: ${currentNode.id} (${currentNode.subType})`);
+            const handler = this.handlers.get(currentNode.subType);
+            if (!handler) {
+                await this.logNode(executionId, currentNode, 'failed', null, null, `No handler found for ${currentNode.subType}`);
+                break;
+            }
+            try {
+                const result = await handler.execute(currentNode, context);
+                await this.logNode(executionId, currentNode, result.status, null, result.output, result.error);
+                if (result.status === 'failed') {
+                    await this.updateExecutionStatus(executionId, 'failed', context.variables);
+                    return;
+                }
+                if (result.output) {
+                    context.variables = { ...context.variables, ...result.output };
+                }
+                const edges = graph.edges.filter((e) => e.source === currentNode.id);
+                if (edges.length === 0)
+                    break;
+                let edge;
+                if (result.nextPath) {
+                    edge = edges.find((e) => e.sourceHandle === result.nextPath || e.sourceAnchor === result.nextPath);
+                    if (!edge) {
+                        await this.logNode(executionId, currentNode, 'failed', null, null, `No outgoing edge found for branch ${result.nextPath}`);
+                        await this.updateExecutionStatus(executionId, 'failed', context.variables);
+                        return;
+                    }
+                }
+                else {
+                    edge = edges[0];
+                }
+                if (!edge)
+                    break;
+                currentNode = graph.nodes.find((n) => n.id === edge.target);
+            }
+            catch (error) {
+                this.logger.error(`Error in node ${currentNode.id}: ${error.message}`);
+                await this.logNode(executionId, currentNode, 'failed', null, null, error.message);
+                await this.updateExecutionStatus(executionId, 'failed', context.variables);
+                return;
+            }
+        }
+        await this.updateExecutionStatus(executionId, 'success', context.variables);
     }
 };
 exports.WorkflowRuntimeService = WorkflowRuntimeService;

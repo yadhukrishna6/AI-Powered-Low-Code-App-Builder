@@ -72,6 +72,10 @@ model WorkflowExecution {
   endTime       DateTime?
   logs          WorkflowLog[]
 
+  // New execution state tracking
+  nodeStates    ExecutionNodeState[]
+  edgeStates    ExecutionEdgeState[]
+
   @@map("workflow_executions")
 }
 
@@ -88,6 +92,39 @@ model WorkflowLog {
   timestamp     DateTime  @default(now())
 
   @@map("workflow_logs")
+}
+
+model ExecutionNodeState {
+  id            String   @id @default(uuid())
+  executionId   String
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id])
+  nodeId        String
+  state         String   // idle, queued, running, success, failed, skipped, waiting, cancelled
+  startedAt     DateTime?
+  completedAt   DateTime?
+  duration      Int?     // milliseconds
+  error         String?
+  retryCount    Int      @default(0)
+  output        Json?
+  input         Json?
+  branchTaken   String?
+
+  @@unique([executionId, nodeId])
+  @@map("execution_node_states")
+}
+
+model ExecutionEdgeState {
+  id             String   @id @default(uuid())
+  executionId    String
+  execution      WorkflowExecution @relation(fields: [executionId], references: [id])
+  edgeId         String
+  state          String   // inactive, active, success-path, failed-path, skipped-path
+  executedAt     DateTime?
+  executionCount Int      @default(0)
+  branchType     String?
+
+  @@unique([executionId, edgeId])
+  @@map("execution_edge_states")
 }
 
 model BusinessRule {

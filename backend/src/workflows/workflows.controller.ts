@@ -39,4 +39,9 @@ export class WorkflowsController {
   getExecution(@Param('id') id: string) {
     return this.workflowsService.getExecution(id);
   }
+
+  @Post('executions/:id/resume')
+  resumeExecution(@Param('id') id: string, @Body() body: { action: 'approve' | 'reject' }) {
+    return this.workflowsService.resumeExecution(id, body.action);
+  }
 }

@@ -51,6 +51,7 @@ export class WorkflowStateService {
         graph: this._workflow()
       };
       const created = await firstValueFrom(this.http.post<any>(this.apiUrl, payload));
+      // Use the updated graph from the backend which now has the correct ID
       this.loadWorkflow(created.graph, projectId);
       return created.id;
     } catch (e) {
@@ -67,9 +68,22 @@ export class WorkflowStateService {
         name: current.name,
         graph: current // Saving the whole graph as JSON
       };
-      await firstValueFrom(this.http.post(this.apiUrl, payload));
+      
+      // If the ID is a frontend-generated one (node_... or similar) or if we know it's new
+      // Actually, we can check if it's a standard UUID or if we've successfully saved it before.
+      // A better way is to see if the backend already knows about this ID.
+      // For now, let's assume if it has a projectId, it might be an update.
+      
+      const response = await firstValueFrom(this.http.put<any>(`${this.apiUrl}/${current.id}`, payload));
+      if (response && response.graph) {
+        this.loadWorkflow(response.graph, response.projectId);
+      }
       console.log('Workflow saved to DB');
-    } catch (e) {
+    } catch (e: any) {
+      // If PUT fails with 404, try POST
+      if (e.status === 404) {
+        return this.createWorkflow(this._workflow().projectId || '', this._workflow().name);
+      }
       console.error('Failed to save workflow:', e);
     }
   }

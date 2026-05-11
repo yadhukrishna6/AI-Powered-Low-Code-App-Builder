@@ -41,6 +41,9 @@ let WorkflowsController = class WorkflowsController {
     getExecution(id) {
         return this.workflowsService.getExecution(id);
     }
+    resumeExecution(id, body) {
+        return this.workflowsService.resumeExecution(id, body.action);
+    }
 };
 exports.WorkflowsController = WorkflowsController;
 __decorate([
@@ -94,6 +97,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], WorkflowsController.prototype, "getExecution", null);
+__decorate([
+    (0, common_1.Post)('executions/:id/resume'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], WorkflowsController.prototype, "resumeExecution", null);
 exports.WorkflowsController = WorkflowsController = __decorate([
     (0, common_1.Controller)('workflows'),
     __metadata("design:paramtypes", [workflows_service_1.WorkflowsService])

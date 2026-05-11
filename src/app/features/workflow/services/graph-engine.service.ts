@@ -137,6 +137,15 @@ export class GraphEngineService {
   connect(sourceId: string, targetId: string, data?: any) {
     if (!this.instance) return;
 
+    // Safety check: ensure elements exist in DOM before connecting
+    const sourceEl = document.getElementById(sourceId);
+    const targetEl = document.getElementById(targetId);
+
+    if (!sourceEl || !targetEl) {
+      console.warn(`Cannot connect: Source (${sourceId}: ${!!sourceEl}) or Target (${targetId}: ${!!targetEl}) not found in DOM.`);
+      return;
+    }
+
     const edgeColor = data?.color || '#94a3b8';
     const overlays: any[] = [
       ['Arrow', { location: 1, width: 12, length: 12, foldback: 0.8 }]
@@ -151,14 +160,18 @@ export class GraphEngineService {
       }]);
     }
 
-    this.instance.connect({
-      source: sourceId,
-      target: targetId,
-      overlays,
-      paintStyle: { stroke: edgeColor, strokeWidth: 2.5 },
-      hoverPaintStyle: { stroke: edgeColor, strokeWidth: 4, opacity: 0.8 },
-      parameters: { ...data, programmatic: true, id: data?.id }
-    } as any);
+    try {
+      this.instance.connect({
+        source: sourceId,
+        target: targetId,
+        overlays,
+        paintStyle: { stroke: edgeColor, strokeWidth: 2.5 },
+        hoverPaintStyle: { stroke: edgeColor, strokeWidth: 4, opacity: 0.8 },
+        parameters: { ...data, programmatic: true, id: data?.id }
+      } as any);
+    } catch (e) {
+      console.error('jsPlumb.connect failed:', e);
+    }
   }
 
   repaintEverything() {

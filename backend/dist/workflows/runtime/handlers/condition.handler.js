@@ -11,11 +11,30 @@ const common_1 = require("@nestjs/common");
 let ConditionHandler = class ConditionHandler {
     async execute(node, context) {
         const { field, operator, value } = node.data || {};
-        const actualValue = context.variables[field];
+        if (!field?.trim()) {
+            throw new Error('Field is required for condition evaluation');
+        }
+        if (!operator) {
+            throw new Error('Operator is required for condition evaluation');
+        }
+        if (value === undefined || value === '') {
+            throw new Error('Value is required for condition evaluation');
+        }
+        let fieldKey = field;
+        if (field && field.startsWith('{{') && field.endsWith('}}')) {
+            fieldKey = field.slice(2, -2).trim();
+        }
+        const actualValue = context.variables[fieldKey];
+        if (actualValue === undefined) {
+            throw new Error(`Field '${fieldKey}' not found in workflow context`);
+        }
         let isTrue = false;
         switch (operator) {
             case '==':
                 isTrue = actualValue == value;
+                break;
+            case '!=':
+                isTrue = actualValue != value;
                 break;
             case '>':
                 isTrue = Number(actualValue) > Number(value);
@@ -26,7 +45,7 @@ let ConditionHandler = class ConditionHandler {
             case 'contains':
                 isTrue = String(actualValue).includes(String(value));
                 break;
-            default: isTrue = false;
+            default: throw new Error(`Unknown operator: ${operator}`);
         }
         return {
             status: 'success',

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkflowStateService } from '../services/workflow-state.service';
@@ -29,6 +29,14 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
         </header>
 
         <div class="panel-content thin-scrollbar">
+          <!-- Validation Errors -->
+          <div *ngIf="validationErrors()[node.id]?.length" class="validation-errors">
+            <div class="error-item" *ngFor="let error of validationErrors()[node.id]">
+              <span class="material-icons">error</span>
+              <span>{{ error }}</span>
+            </div>
+          </div>
+
           <!-- General Section -->
           <div class="prop-section">
             <h4 class="section-title">General Configuration</h4>
@@ -159,7 +167,13 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
 
     .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
 
-    .help-text { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.4; }
+    .validation-errors { margin-bottom: 1.5rem; }
+    .error-item { 
+      display: flex; align-items: center; gap: 8px; 
+      padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px;
+      font-size: 0.75rem; color: #ef4444; margin-bottom: 0.5rem;
+    }
+    .error-item .material-icons { font-size: 1rem; }
 
     .info-alert {
       display: flex; gap: 12px; padding: 1rem;
@@ -177,6 +191,14 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
     .empty-icon .material-icons { font-size: 1.8rem; opacity: 0.4; }
     .empty-state h3 { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
     .empty-state p { font-size: 0.8rem; line-height: 1.5; }
+
+    .validation-errors { margin-bottom: 1.5rem; }
+    .error-item { 
+      display: flex; align-items: center; gap: 8px; 
+      padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px;
+      font-size: 0.75rem; color: #ef4444; margin-bottom: 0.5rem;
+    }
+    .error-item .material-icons { font-size: 1rem; }
   `]
 })
 export class PropertiesPanelComponent {
@@ -184,8 +206,21 @@ export class PropertiesPanelComponent {
   registry = inject(NodeRegistryService);
   modal = inject(ModalService);
 
+  validationErrors = signal<{ [key: string]: string[] }>({});
+
+  constructor() {
+    // Validate on node selection
+    effect(() => {
+      const node = this.state.selectedNode();
+      if (node) {
+        this.validateNode(node);
+      }
+    });
+  }
+
   updateNode(node: any) {
     this.state.updateNodeData(node.id, node.data);
+    this.validateNode(node);
   }
 
   convertNode(node: any, newSubType: string) {
@@ -201,6 +236,45 @@ export class PropertiesPanelComponent {
     this.state.updateNodeData(node.id, node.data);
     // Force state refresh for the whole node
     this.state.updateNodeStatus(node.id, 'idle'); 
+    this.validateNode(node);
+  }
+
+  validateNode(node: any) {
+    const errors: string[] = [];
+    const entry = this.registry.getEntry(node.subType);
+    
+    if (!entry) return;
+
+    // General validations
+    if (!node.label?.trim()) {
+      errors.push('Node name is required');
+    }
+
+    // Node-specific validations
+    switch (node.subType) {
+      case 'condition':
+        if (!node.data?.field?.trim()) errors.push('Field is required for condition');
+        if (!node.data?.operator) errors.push('Operator is required for condition');
+        if (node.data?.value === undefined || node.data?.value === '') errors.push('Value is required for condition');
+        break;
+      case 'approval':
+        if (!node.data?.approverRole?.trim()) errors.push('Approver role is required');
+        break;
+      case 'send-notification':
+        if (!node.data?.channel) errors.push('Notification channel is required');
+        if (!node.data?.message?.trim()) errors.push('Message is required');
+        break;
+      case 'api-request':
+        if (!node.data?.url?.trim()) errors.push('API URL is required');
+        if (!node.data?.method) errors.push('HTTP method is required');
+        break;
+      case 'form-submitted':
+        if (!node.data?.formId?.trim()) errors.push('Form ID is required');
+        break;
+      // Add more as needed
+    }
+
+    this.validationErrors.update(current => ({ ...current, [node.id]: errors }));
   }
 
   async deleteNode(nodeId: string) {

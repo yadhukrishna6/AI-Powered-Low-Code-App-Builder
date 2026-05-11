@@ -60,17 +60,37 @@ export class WorkflowRuntimeService {
           this.http.get<{ status: string, logs: any[] }>(`${this.apiUrl}/executions/${executionId}`)
         );
 
-        // Update node statuses in the UI based on logs
+        // Update node statuses in the UI based on logs and track execution history
+        const history = execution.logs?.map((log: any) => {
+          const messageParts: string[] = [];
+          if (log.error) messageParts.push(log.error);
+          if (log.output) messageParts.push(`Output: ${JSON.stringify(log.output)}`);
+
+          return {
+            nodeId: log.nodeId,
+            timestamp: new Date(log.timestamp),
+            success: log.status === 'success',
+            input: log.input,
+            output: log.output,
+            error: log.error || undefined,
+            message: messageParts.length > 0 ? messageParts.join(' | ') : undefined,
+          };
+        }) ?? [];
+
         if (execution.logs) {
           execution.logs.forEach((log: any) => {
             this.state.updateNodeStatus(log.nodeId, log.status as ExecutionStatus, log.error);
           });
         }
 
+        this.activeExecutionContext.update((ctx: WorkflowExecutionContext | null) =>
+          ctx ? { ...ctx, history, status: execution.status === 'active' ? 'active' : execution.status === 'failed' ? 'failed' : 'completed' } : ctx
+        );
+
         if (execution.status === 'success' || execution.status === 'failed') {
           clearInterval(pollInterval);
           this.activeExecutionContext.update((ctx: WorkflowExecutionContext | null) => 
-            ctx ? { ...ctx, status: 'completed', endTime: new Date() } : null
+            ctx ? { ...ctx, endTime: new Date() } : null
           );
           console.log(`Execution ${executionId} finished with status: ${execution.status}`);
         }
@@ -85,7 +105,18 @@ export class WorkflowRuntimeService {
   // Resume a paused workflow (needed for UI compatibility)
   async resumeWorkflow(nodeId: string, action: 'approve' | 'reject') {
     console.log(`Resuming workflow at ${nodeId} with action ${action}`);
-    // Future: Hit backend resume endpoint
+    // Find the active execution
+    const execution = this.activeExecutionContext();
+    if (!execution || execution.status !== 'active') return;
+
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.apiUrl}/executions/${execution.instanceId}/resume`, { action })
+      );
+      console.log('Workflow resumed successfully');
+    } catch (e) {
+      console.error('Failed to resume workflow:', e);
+    }
   }
 
   resetWorkflowStatus(workflow: Workflow) {
