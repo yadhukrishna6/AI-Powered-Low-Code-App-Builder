@@ -4,41 +4,43 @@ import { NodeHandler, NodeResult, ExecutionContext } from '../node-handler.inter
 @Injectable()
 export class ConditionHandler implements NodeHandler {
   async execute(node: any, context: ExecutionContext): Promise<NodeResult> {
-    const { field, operator, value } = node.data || {};
+    const { conditions, matchType, field, operator, value } = node.data || {};
     
-    if (!field?.trim()) {
-      throw new Error('Field is required for condition evaluation');
+    // Convert single condition to array for uniform processing if needed
+    const rules = conditions || (field ? [{ field, operator, value }] : []);
+
+    if (rules.length === 0) {
+      throw new Error('No conditions defined for evaluation');
     }
-    
-    if (!operator) {
-      throw new Error('Operator is required for condition evaluation');
-    }
-    
-    if (value === undefined || value === '') {
-      throw new Error('Value is required for condition evaluation');
-    }
-    
-    // Parse template if field is wrapped in {{ }}
-    let fieldKey = field;
-    if (field && field.startsWith('{{') && field.endsWith('}}')) {
-      fieldKey = field.slice(2, -2).trim();
-    }
-    
-    // Get actual value from context
-    const actualValue = context.variables[fieldKey];
-    
-    if (actualValue === undefined) {
-      throw new Error(`Field '${fieldKey}' not found in workflow context`);
-    }
-    
+
+    const results = rules.map((rule: any) => {
+      const { field: f, operator: op, value: v } = rule;
+      
+      // Parse template if field is wrapped in {{ }}
+      let fieldKey = f;
+      if (f && f.startsWith('{{') && f.endsWith('}}')) {
+        fieldKey = f.slice(2, -2).trim();
+      }
+      
+      const actualValue = context.variables[fieldKey];
+      if (actualValue === undefined) return false;
+
+      switch (op) {
+        case '==': return actualValue == v;
+        case '!=': return actualValue != v;
+        case '>': return Number(actualValue) > Number(v);
+        case '<': return Number(actualValue) < Number(v);
+        case 'contains': return String(actualValue).includes(String(v));
+        default: return false;
+      }
+    });
+
     let isTrue = false;
-    switch (operator) {
-      case '==': isTrue = actualValue == value; break;
-      case '!=': isTrue = actualValue != value; break;
-      case '>': isTrue = Number(actualValue) > Number(value); break;
-      case '<': isTrue = Number(actualValue) < Number(value); break;
-      case 'contains': isTrue = String(actualValue).includes(String(value)); break;
-      default: throw new Error(`Unknown operator: ${operator}`);
+    if (matchType === 'OR') {
+      isTrue = results.some(r => r === true);
+    } else {
+      // Default is AND
+      isTrue = results.every(r => r === true);
     }
 
     return {

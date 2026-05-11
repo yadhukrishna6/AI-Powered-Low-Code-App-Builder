@@ -4,7 +4,7 @@ import { WorkflowNodeType } from '../models/workflow.model';
 export interface NodeProperty {
   key: string;
   label: string;
-  type: 'text' | 'select' | 'textarea' | 'number' | 'cron' | 'variable-picker' | 'switch-cases' | 'form-picker';
+  type: 'text' | 'select' | 'textarea' | 'number' | 'cron' | 'variable-picker' | 'switch-cases' | 'form-picker' | 'multi-condition';
   options?: any[];
   placeholder?: string;
   helpText?: string;
@@ -86,11 +86,10 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     icon: 'call_split',
     color: '#f59e0b',
     description: 'Branch the workflow based on variables',
-    defaultData: { field: '', operator: '==', value: '' },
+    defaultData: { conditions: [{ field: '', operator: '==', value: '' }], matchType: 'AND' },
     properties: [
-      { key: 'field', label: 'Field to Check', type: 'variable-picker' },
-      { key: 'operator', label: 'Operator', type: 'select', options: ['==', '!=', '>', '<', 'contains'] },
-      { key: 'value', label: 'Value', type: 'text' }
+      { key: 'matchType', label: 'Match Type', type: 'select', options: ['AND', 'OR'] },
+      { key: 'conditions', label: 'Logic Conditions', type: 'multi-condition' }
     ],
     branches: [
       { id: 'true', label: 'TRUE', color: '#10b981' },

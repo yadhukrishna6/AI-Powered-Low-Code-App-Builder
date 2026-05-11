@@ -142,15 +142,15 @@ import { WorkflowStateService } from '../services/workflow-state.service';
   `,
   styles: [`
     .logs-container {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 1.25rem;
       height: 100%;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      color: #374151;
+      box-shadow: var(--card-shadow);
+      color: var(--text-primary);
     }
 
     .logs-header {
@@ -160,8 +160,8 @@ import { WorkflowStateService } from '../services/workflow-state.service';
       margin-bottom: 1.25rem;
     }
 
-    .header-info h3 { font-size: 0.85rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
-    .instance-id { font-size: 0.6rem; color: #6b7280; font-family: 'Fira Code', monospace; margin: 4px 0 0; opacity: 0.8; word-break: break-all; }
+    .header-info h3 { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
+    .instance-id { font-size: 0.6rem; color: var(--text-secondary); font-family: 'Fira Code', monospace; margin: 4px 0 0; opacity: 0.8; word-break: break-all; }
     
     .header-actions { display: flex; align-items: center; gap: 0.5rem; }
     
@@ -179,17 +179,17 @@ import { WorkflowStateService } from '../services/workflow-state.service';
     .close-btn {
       width: 26px; height: 26px;
       display: flex; align-items: center; justify-content: center;
-      border-radius: 6px; color: #6b7280;
-      transition: all 0.2s; background: #f3f4f6;
+      border-radius: 6px; color: var(--text-secondary);
+      transition: all 0.2s; background: var(--input-bg);
     }
-    .close-btn:hover { background: #e5e7eb; color: #111827; }
+    .close-btn:hover { background: var(--border); color: var(--text-primary); }
     .close-btn .material-icons { font-size: 1rem; }
 
     /* Progress */
     .progress-container { margin-bottom: 1.25rem; }
-    .progress-bar { height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+    .progress-bar { height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
     .progress-fill { height: 100%; background: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.3); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-    .progress-text { font-size: 0.6rem; font-weight: 700; color: #6b7280; }
+    .progress-text { font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); }
 
     .timeline {
       flex: 1;
@@ -204,13 +204,13 @@ import { WorkflowStateService } from '../services/workflow-state.service';
 
     .timeline-item:not(:last-child)::after {
       content: ''; position: absolute; left: 11px; top: 24px; bottom: -24px;
-      width: 2px; background: #f3f4f6;
+      width: 2px; background: var(--border);
     }
 
     .item-marker {
       width: 24px; height: 24px;
       display: flex; align-items: center; justify-content: center;
-      background: #fff; border: 2px solid #e5e7eb;
+      background: var(--bg-secondary); border: 2px solid var(--border);
       border-radius: 50%; z-index: 1; flex-shrink: 0;
     }
 
@@ -224,7 +224,7 @@ import { WorkflowStateService } from '../services/workflow-state.service';
 
     .item-content { flex: 1; min-width: 0; }
     .item-card {
-      background: #f9fafb; border: 1px solid #e5e7eb;
+      background: var(--input-bg); border: 1px solid var(--border);
       border-radius: 12px; padding: 0.85rem; position: relative; overflow: hidden;
     }
     .item-card.success { border-left: 4px solid #22c55e; }
@@ -233,19 +233,19 @@ import { WorkflowStateService } from '../services/workflow-state.service';
     .item-card.waiting { border-left: 4px solid #f59e0b; }
 
     .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem; flex-wrap: wrap; }
-    .node-label { font-size: 0.75rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+    .node-label { font-size: 0.75rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
     .status-text { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
-    .status-text.success { background: #f0fdf4; color: #166534; }
-    .status-text.error { background: #fef2f2; color: #991b1b; }
-    .timestamp { font-size: 0.6rem; color: #9ca3af; font-family: monospace; }
+    .status-text.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .status-text.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .timestamp { font-size: 0.6rem; color: var(--text-secondary); font-family: monospace; }
     
-    .item-message { font-size: 0.7rem; color: #4b5563; line-height: 1.4; margin-bottom: 0.5rem; word-break: break-word; }
+    .item-message { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.5rem; word-break: break-word; }
     
     .item-metrics { display: flex; gap: 0.75rem; margin-bottom: 0.5rem; }
-    .metric { display: flex; align-items: center; gap: 4px; font-size: 0.6rem; color: #6b7280; font-weight: 600; }
+    .metric { display: flex; align-items: center; gap: 4px; font-size: 0.6rem; color: var(--text-secondary); font-weight: 600; }
     .metric .material-icons { font-size: 0.8rem; opacity: 0.6; }
 
-    .item-details { margin-top: 0.5rem; border-top: 1px solid #f3f4f6; padding-top: 0.5rem; }
+    .item-details { margin-top: 0.5rem; border-top: 1px solid var(--border); padding-top: 0.5rem; }
     .item-details summary { font-size: 0.65rem; font-weight: 700; color: #3b82f6; cursor: pointer; outline: none; list-style: none; display: flex; align-items: center; gap: 4px; }
     .item-details summary::before { content: '▶'; font-size: 0.5rem; transition: transform 0.2s; color: #3b82f6; }
     .item-details[open] summary::before { transform: rotate(90deg); }
@@ -257,13 +257,13 @@ import { WorkflowStateService } from '../services/workflow-state.service';
       font-family: 'Fira Code', monospace; line-height: 1.4; word-break: break-all; white-space: pre-wrap;
     }
 
-    .loader-line { height: 2px; width: 100%; background: #f3f4f6; position: absolute; bottom: 0; left: 0; overflow: hidden; }
+    .loader-line { height: 2px; width: 100%; background: var(--border); position: absolute; bottom: 0; left: 0; overflow: hidden; }
     .loader-line::after {
       content: ''; position: absolute; left: -50%; width: 50%; height: 100%;
       background: #3b82f6; animation: loader-slide 1.5s infinite linear;
     }
 
-    .waiting-msg { font-size: 0.7rem; color: #4b5563; margin-bottom: 1rem; line-height: 1.4; }
+    .waiting-msg { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.4; }
     .item-actions { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
     .btn-approve, .btn-reject {
       display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0.6rem;
@@ -280,7 +280,7 @@ import { WorkflowStateService } from '../services/workflow-state.service';
       border-radius: 12px; padding: 1.25rem; text-align: center;
     }
     .completion-card h4 { font-size: 0.85rem; font-weight: 800; margin: 0 0 0.5rem; color: #166534; }
-    .completion-card p { font-size: 0.7rem; color: #15803d; margin-bottom: 1rem; }
+    .completion-card p { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem; }
     .completion-card.failed { background: #fef2f2; border-color: #fee2e2; }
     .completion-card.failed h4 { color: #991b1b; }
     .completion-card.failed p { color: #b91c1c; }

@@ -12,8 +12,8 @@ export class ThemeService {
     effect(() => {
       const currentTheme = this.theme();
       localStorage.setItem('theme', currentTheme);
-      document.body.classList.remove('light-theme', 'dark-theme');
-      document.body.classList.add(`${currentTheme}-theme`);
+      document.body.classList.remove('light', 'dark');
+      document.body.classList.add(currentTheme);
     });
   }
 

@@ -66,9 +66,31 @@ import { ProjectService } from '../../../core/services/project.service';
         <div *ngSwitchCase="'switch-cases'" class="switch-cases">
            <div *ngFor="let c of data[property.key]; let i = index" class="case-item">
              <input type="text" [(ngModel)]="c.value" (ngModelChange)="onChanged()" placeholder="Value">
-             <button (click)="removeCase(i)" class="remove-btn"><span class="material-icons">close</span></button>
+             <button (click)="removeRow(property.key, i)" class="remove-btn"><span class="material-icons">close</span></button>
            </div>
-           <button (click)="addCase()" class="add-btn">+ Add Case</button>
+           <button (click)="addRow(property.key, { value: '', path: '' })" class="add-btn">+ Add Case</button>
+        </div>
+
+        <!-- Multi Condition -->
+        <div *ngSwitchCase="'multi-condition'" class="multi-condition">
+          <div *ngFor="let cond of data[property.key]; let i = index" class="condition-row">
+            <div class="cond-fields">
+              <input type="text" [(ngModel)]="cond.field" (ngModelChange)="onChanged()" placeholder="{{ '{{variable}}' }}" class="cond-input">
+              <select [(ngModel)]="cond.operator" (ngModelChange)="onChanged()" class="cond-select">
+                <option value="==">==</option>
+                <option value="!=">!=</option>
+                <option value=">">></option>
+                <option value="<"><</option>
+                <option value="contains">contains</option>
+              </select>
+              <input type="text" [(ngModel)]="cond.value" (ngModelChange)="onChanged()" placeholder="Value" class="cond-input">
+            </div>
+            <button (click)="removeRow(property.key, i)" class="remove-btn"><span class="material-icons">delete</span></button>
+          </div>
+          <button (click)="addRow(property.key, { field: '', operator: '==', value: '' })" class="add-btn">
+            <span class="material-icons">add_circle_outline</span>
+            Add Condition
+          </button>
         </div>
       </ng-container>
 
@@ -97,8 +119,16 @@ import { ProjectService } from '../../../core/services/project.service';
 
     .switch-cases { display: flex; flex-direction: column; gap: 8px; }
     .case-item { display: flex; gap: 8px; }
-    .remove-btn { color: #ef4444; }
-    .add-btn { font-size: 0.75rem; color: var(--accent); font-weight: 700; text-align: left; padding: 4px 0; }
+    .remove-btn { color: #ef4444; padding: 4px; border-radius: 4px; transition: background 0.2s; }
+    .remove-btn:hover { background: rgba(239, 68, 68, 0.1); }
+    .add-btn { font-size: 0.75rem; color: var(--accent); font-weight: 700; text-align: left; padding: 6px 0; display: flex; align-items: center; gap: 4px; }
+    .add-btn .material-icons { font-size: 1.1rem; }
+
+    .multi-condition { display: flex; flex-direction: column; gap: 12px; }
+    .condition-row { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+    .cond-fields { display: flex; flex: 1; gap: 4px; }
+    .cond-input { flex: 1; min-width: 0; padding: 6px 8px !important; font-size: 0.75rem !important; }
+    .cond-select { width: 60px !important; padding: 6px 4px !important; font-size: 0.75rem !important; text-align: center; }
   `]
 })
 export class DynamicPropertyComponent {
@@ -113,14 +143,14 @@ export class DynamicPropertyComponent {
     this.change.emit(this.data);
   }
 
-  addCase() {
-    if (!this.data[this.property.key]) this.data[this.property.key] = [];
-    this.data[this.property.key].push({ value: '', path: '' });
+  addRow(key: string, defaultObj: any) {
+    if (!this.data[key]) this.data[key] = [];
+    this.data[key].push({ ...defaultObj });
     this.onChanged();
   }
 
-  removeCase(index: number) {
-    this.data[this.property.key].splice(index, 1);
+  removeRow(key: string, index: number) {
+    this.data[key].splice(index, 1);
     this.onChanged();
   }
 }

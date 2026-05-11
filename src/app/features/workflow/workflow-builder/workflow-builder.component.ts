@@ -261,16 +261,30 @@ export class WorkflowBuilderComponent implements OnInit {
     const workflow = this.state.workflow();
     this.runtime.resetWorkflowStatus(workflow);
     
-    // Check if the workflow has input dependencies (like the 'date' field that failed earlier)
-    const variablesRaw = prompt('Enter initial variables (JSON) for testing (optional):', '{}');
-    let variables = {};
+    // Use the professional ModalService instead of window.prompt
+    const variablesRaw = await this.modal.show({
+      title: 'Run Simulation',
+      message: 'Enter initial variables (JSON) for this execution. For example: { "amount": 100 }',
+      type: 'prompt',
+      placeholder: '{ "key": "value" }',
+      initialValue: '{}',
+      confirmText: 'Run Workflow',
+      cancelText: 'Cancel'
+    });
+
+    if (variablesRaw === null) return; // User cancelled
     
+    let variables = {};
     try {
-      if (variablesRaw) {
-        variables = JSON.parse(variablesRaw);
-      }
+      variables = JSON.parse(variablesRaw);
     } catch (e) {
-      console.warn('Invalid JSON for variables, starting with empty context.');
+      await this.modal.show({
+        title: 'Invalid JSON',
+        message: 'The variables you entered are not valid JSON. Please check your syntax and try again.',
+        type: 'danger',
+        confirmText: 'Fix it'
+      });
+      return;
     }
 
     await this.runtime.executeWorkflow(workflow, variables);
