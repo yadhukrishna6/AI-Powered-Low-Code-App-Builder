@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Workflow, WorkflowNode, WorkflowEdge, Position, ExecutionStatus } from '../models/workflow.model';
+import { Workflow, WorkflowNode, WorkflowEdge, Position, ExecutionStatus, EdgeExecutionState } from '../models/workflow.model';
 import { NodeRegistryService } from '../registry/node-registry.service';
 import { ModalService } from '../../../core/services/modal.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +13,9 @@ export class WorkflowStateService {
   private http = inject(HttpClient);
   private nodeRegistry = inject(NodeRegistryService);
   private apiUrl = 'http://localhost:3000/api/v1/workflows';
+
+  // Tracks the actual DB record ID (null means never saved)
+  private _dbId: string | null = null;
 
   // State Signals
   private _workflow = signal<Workflow & { projectId?: string }>({
@@ -51,8 +54,11 @@ export class WorkflowStateService {
         graph: this._workflow()
       };
       const created = await firstValueFrom(this.http.post<any>(this.apiUrl, payload));
-      // Use the updated graph from the backend which now has the correct ID
-      this.loadWorkflow(created.graph, projectId);
+      // Always use the DB record ID as the canonical workflow ID
+      this._dbId = created.id;
+      const graph = created.graph || this._workflow();
+      graph.id = created.id;
+      this.loadWorkflow(graph, projectId);
       return created.id;
     } catch (e) {
       console.error('Failed to create workflow:', e);
@@ -63,25 +69,27 @@ export class WorkflowStateService {
   async saveWorkflow() {
     try {
       const current = this._workflow();
+
+      // If we've never saved this workflow, create it
+      if (!this._dbId) {
+        return this.createWorkflow(current.projectId || '', current.name);
+      }
+
+      // Update existing workflow
       const payload = {
-        id: current.id,
         name: current.name,
-        graph: current // Saving the whole graph as JSON
+        graph: { ...current, id: this._dbId } // Ensure graph ID matches DB ID
       };
-      
-      // If the ID is a frontend-generated one (node_... or similar) or if we know it's new
-      // Actually, we can check if it's a standard UUID or if we've successfully saved it before.
-      // A better way is to see if the backend already knows about this ID.
-      // For now, let's assume if it has a projectId, it might be an update.
-      
-      const response = await firstValueFrom(this.http.put<any>(`${this.apiUrl}/${current.id}`, payload));
+
+      const response = await firstValueFrom(this.http.put<any>(`${this.apiUrl}/${this._dbId}`, payload));
       if (response && response.graph) {
+        response.graph.id = this._dbId;
         this.loadWorkflow(response.graph, response.projectId);
       }
       console.log('Workflow saved to DB');
     } catch (e: any) {
-      // If PUT fails with 404, try POST
       if (e.status === 404) {
+        this._dbId = null;
         return this.createWorkflow(this._workflow().projectId || '', this._workflow().name);
       }
       console.error('Failed to save workflow:', e);
@@ -92,6 +100,9 @@ export class WorkflowStateService {
     try {
       const data = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
       if (data && data.graph) {
+        // Always override graph.id with the canonical DB record ID
+        this._dbId = data.id;
+        data.graph.id = data.id;
         this.loadWorkflow(data.graph, data.projectId);
         return true;
       }
@@ -107,7 +118,11 @@ export class WorkflowStateService {
       const workflows = await firstValueFrom(this.http.get<any[]>(`${this.apiUrl}?projectId=${projectId}`));
       if (workflows && workflows.length > 0) {
         const first = workflows[0];
-        this.loadWorkflow(first.graph, projectId);
+        // Always override graph.id with the canonical DB record ID
+        this._dbId = first.id;
+        const graph = first.graph || { nodes: [], edges: [] };
+        graph.id = first.id;
+        this.loadWorkflow(graph, projectId);
         return first.id;
       }
       return null;
@@ -235,6 +250,21 @@ export class WorkflowStateService {
     }));
   }
 
+  updateEdgeExecutionState(edgeId: string, executionState: EdgeExecutionState) {
+    this._workflow.update(w => ({
+      ...w,
+      edges: w.edges.map(e => e.id === edgeId ? { ...e, executionState } : e)
+    }));
+  }
+
+  resetExecutionStates() {
+    this._workflow.update(w => ({
+      ...w,
+      nodes: w.nodes.map(n => ({ ...n, status: 'idle' as ExecutionStatus, errorMessage: undefined, executionDuration: undefined })),
+      edges: w.edges.map(e => ({ ...e, executionState: 'inactive' as EdgeExecutionState }))
+    }));
+  }
+
   selectNode(nodeId: string | null) {
     this._selectedNodeId.set(nodeId);
     this._selectedEdgeId.set(null);
@@ -258,9 +288,17 @@ export class WorkflowStateService {
       zoom: workflow.zoom || 1,
       pan: workflow.pan || { x: 0, y: 0 }
     });
+    
+    // Auto-reset execution visuals on load
+    this.resetExecutionStates();
   }
 
   exportWorkflow(): Workflow {
     return this._workflow();
+  }
+
+  /** Returns the canonical DB record ID, or null if never persisted */
+  getDbId(): string | null {
+    return this._dbId;
   }
 }

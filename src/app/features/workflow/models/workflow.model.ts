@@ -1,5 +1,6 @@
 export type WorkflowNodeType = 'trigger' | 'logic' | 'action';
-export type ExecutionStatus = 'idle' | 'running' | 'success' | 'error' | 'skipped' | 'waiting';
+export type ExecutionStatus = 'idle' | 'queued' | 'running' | 'success' | 'error' | 'failed' | 'skipped' | 'waiting' | 'cancelled';
+export type EdgeExecutionState = 'inactive' | 'active' | 'success-path' | 'failed-path' | 'skipped-path';
 
 export interface Position {
   x: number;
@@ -16,6 +17,7 @@ export interface WorkflowNode<T = any> {
   status: ExecutionStatus;
   errorMessage?: string;
   lastExecuted?: Date;
+  executionDuration?: number; // ms
 }
 
 export interface WorkflowEdge {
@@ -27,6 +29,7 @@ export interface WorkflowEdge {
   label?: string;
   color?: string;
   type?: 'default' | 'success' | 'failure' | 'conditional';
+  executionState?: EdgeExecutionState;
 }
 
 export interface Workflow {

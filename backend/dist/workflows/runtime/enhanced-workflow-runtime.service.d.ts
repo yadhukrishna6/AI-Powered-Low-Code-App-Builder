@@ -12,9 +12,10 @@ export declare class EnhancedWorkflowRuntimeService {
     resumeExecution(executionId: string, action: 'approve' | 'reject'): Promise<void>;
     private resumeFromWaitingNode;
     private continueExecutionFromNode;
-    private initializeExecutionState;
-    private updateNodeExecutionState;
-    private updateEdgeExecutionState;
+    private setNodeState;
+    private setEdgeState;
+    private persistStateSnapshot;
+    private logNode;
     private updateExecutionStatus;
     private mapNodeResultToState;
     getExecutionState(executionId: string): Promise<WorkflowExecutionSnapshot | null>;

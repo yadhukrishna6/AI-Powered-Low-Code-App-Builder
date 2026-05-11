@@ -79,6 +79,9 @@ export declare class WorkflowsController {
         endTime: Date | null;
     }>;
     getExecution(id: string): Promise<({
+        workflow: {
+            graph: import("@prisma/client/runtime/library").JsonValue;
+        };
         logs: {
             error: string | null;
             id: string;

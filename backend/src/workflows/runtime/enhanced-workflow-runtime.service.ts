@@ -10,6 +10,7 @@ import {
   EdgeExecutionMetadata,
   WorkflowExecutionSnapshot
 } from './execution-state.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class EnhancedWorkflowRuntimeService {
@@ -23,7 +24,6 @@ export class EnhancedWorkflowRuntimeService {
   }
 
   async executeWorkflow(workflowId: string, variables: Record<string, any> = {}): Promise<string> {
-    // Create execution record
     const execution = await this.prisma.workflowExecution.create({
       data: {
         workflowId,
@@ -33,7 +33,6 @@ export class EnhancedWorkflowRuntimeService {
       }
     });
 
-    // Start execution asynchronously
     this.runExecution(execution.id).catch(err => {
       this.logger.error(`Execution ${execution.id} failed:`, err);
     });
@@ -56,8 +55,22 @@ export class EnhancedWorkflowRuntimeService {
       variables: execution.context as Record<string, any>,
     };
 
-    // Initialize execution state
-    await this.initializeExecutionState(executionId, graph);
+    // Initialize in-memory execution state
+    const nodeStates: NodeExecutionMetadata[] = graph.nodes.map((node: any) => ({
+      nodeId: node.id,
+      state: 'idle' as NodeExecutionState,
+      retryCount: 0,
+    }));
+
+    const edgeStates: EdgeExecutionMetadata[] = graph.edges.map((edge: any) => ({
+      edgeId: edge.id,
+      state: 'inactive' as EdgeExecutionState,
+      executionCount: 0,
+      branchType: edge.sourceAnchor || edge.label || undefined,
+    }));
+
+    // Persist initial state snapshot
+    await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
     // Find trigger node
     let currentNode = graph.nodes.find((n: any) =>
@@ -66,24 +79,35 @@ export class EnhancedWorkflowRuntimeService {
 
     while (currentNode) {
       // Update node state to running
-      await this.updateNodeExecutionState(executionId, currentNode.id, 'running');
+      this.setNodeState(nodeStates, currentNode.id, 'running', { startedAt: new Date() });
+      await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
       const handler = this.handlers.get(currentNode.subType);
 
       if (!handler) {
-        await this.updateNodeExecutionState(executionId, currentNode.id, 'failed',
-          `No handler found for ${currentNode.subType}`);
+        this.setNodeState(nodeStates, currentNode.id, 'failed', {
+          error: `No handler found for ${currentNode.subType}`
+        });
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
         await this.updateExecutionStatus(executionId, 'failed', context.variables);
         return;
       }
 
       try {
         const result = await handler.execute(currentNode, context);
-
-        // Update node state based on result
         const nodeState = this.mapNodeResultToState(result.status);
-        await this.updateNodeExecutionState(executionId, currentNode.id, nodeState,
-          result.error, result.output, result.nextPath);
+
+        this.setNodeState(nodeStates, currentNode.id, nodeState, {
+          completedAt: ['success', 'failed', 'skipped', 'cancelled'].includes(nodeState) ? new Date() : undefined,
+          error: result.error,
+          output: result.output,
+          branchTaken: result.nextPath,
+        });
+
+        // Log the execution step
+        await this.logNode(executionId, currentNode, nodeState, result.output, result.error);
+
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
         if (result.status === 'failed') {
           await this.updateExecutionStatus(executionId, 'failed', context.variables);
@@ -109,8 +133,10 @@ export class EnhancedWorkflowRuntimeService {
         if (result.nextPath) {
           edge = edges.find((e: any) => e.sourceHandle === result.nextPath || e.sourceAnchor === result.nextPath);
           if (!edge) {
-            await this.updateNodeExecutionState(executionId, currentNode.id, 'failed',
-              `No outgoing edge found for branch ${result.nextPath}`);
+            this.setNodeState(nodeStates, currentNode.id, 'failed', {
+              error: `No outgoing edge found for branch ${result.nextPath}`
+            });
+            await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
             await this.updateExecutionStatus(executionId, 'failed', context.variables);
             return;
           }
@@ -121,13 +147,15 @@ export class EnhancedWorkflowRuntimeService {
         if (!edge) break;
 
         // Update edge state to active
-        await this.updateEdgeExecutionState(executionId, edge.id, 'active', result.nextPath);
+        this.setEdgeState(edgeStates, edge.id, 'active', result.nextPath);
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
         currentNode = graph.nodes.find((n: any) => n.id === edge.target);
 
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(`Error in node ${currentNode.id}: ${error.message}`);
-        await this.updateNodeExecutionState(executionId, currentNode.id, 'failed', error.message);
+        this.setNodeState(nodeStates, currentNode.id, 'failed', { error: error.message });
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
         await this.updateExecutionStatus(executionId, 'failed', context.variables);
         return;
       }
@@ -146,7 +174,6 @@ export class EnhancedWorkflowRuntimeService {
       throw new Error('Execution not in waiting state');
     }
 
-    // Update execution with resume action
     await this.prisma.workflowExecution.update({
       where: { id: executionId },
       data: {
@@ -158,7 +185,6 @@ export class EnhancedWorkflowRuntimeService {
       },
     });
 
-    // Continue execution from waiting node
     await this.resumeFromWaitingNode(executionId, action);
   }
 
@@ -170,7 +196,6 @@ export class EnhancedWorkflowRuntimeService {
 
     if (!execution) return;
 
-    // Find the waiting node from execution logs
     const waitingLog = await this.prisma.workflowLog.findFirst({
       where: { executionId, status: 'waiting' },
       orderBy: { timestamp: 'desc' },
@@ -185,37 +210,53 @@ export class EnhancedWorkflowRuntimeService {
       variables: { ...(execution.context as Record<string, any>), resumeAction: action },
     };
 
+    // Restore state snapshot from result
+    const snapshot = execution.result as any;
+    const nodeStates: NodeExecutionMetadata[] = snapshot?.nodeStates || [];
+    const edgeStates: EdgeExecutionMetadata[] = snapshot?.edgeStates || [];
+
     let currentNode = graph.nodes.find((n: any) => n.id === waitingLog.nodeId);
     if (!currentNode) return;
 
-    // Continue execution from this node
-    await this.continueExecutionFromNode(executionId, currentNode, context, graph);
+    await this.continueExecutionFromNode(executionId, currentNode, context, graph, nodeStates, edgeStates);
   }
 
   private async continueExecutionFromNode(
     executionId: string,
     currentNode: any,
     context: ExecutionContext,
-    graph: any
+    graph: any,
+    nodeStates: NodeExecutionMetadata[],
+    edgeStates: EdgeExecutionMetadata[]
   ) {
     while (currentNode) {
-      await this.updateNodeExecutionState(executionId, currentNode.id, 'running');
+      this.setNodeState(nodeStates, currentNode.id, 'running', { startedAt: new Date() });
+      await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
       const handler = this.handlers.get(currentNode.subType);
 
       if (!handler) {
-        await this.updateNodeExecutionState(executionId, currentNode.id, 'failed',
-          `No handler found for ${currentNode.subType}`);
+        this.setNodeState(nodeStates, currentNode.id, 'failed', {
+          error: `No handler found for ${currentNode.subType}`
+        });
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
         await this.updateExecutionStatus(executionId, 'failed', context.variables);
         return;
       }
 
       try {
         const result = await handler.execute(currentNode, context);
-
         const nodeState = this.mapNodeResultToState(result.status);
-        await this.updateNodeExecutionState(executionId, currentNode.id, nodeState,
-          result.error, result.output, result.nextPath);
+
+        this.setNodeState(nodeStates, currentNode.id, nodeState, {
+          completedAt: ['success', 'failed', 'skipped', 'cancelled'].includes(nodeState) ? new Date() : undefined,
+          error: result.error,
+          output: result.output,
+          branchTaken: result.nextPath,
+        });
+
+        await this.logNode(executionId, currentNode, nodeState, result.output, result.error);
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
 
         if (result.status === 'failed') {
           await this.updateExecutionStatus(executionId, 'failed', context.variables);
@@ -227,12 +268,10 @@ export class EnhancedWorkflowRuntimeService {
           return;
         }
 
-        // Merge output into context variables
         if (result.output) {
           context.variables = { ...context.variables, ...result.output };
         }
 
-        // Find next node
         const edges = graph.edges.filter((e: any) => e.source === currentNode.id);
         if (edges.length === 0) break;
 
@@ -240,8 +279,10 @@ export class EnhancedWorkflowRuntimeService {
         if (result.nextPath) {
           edge = edges.find((e: any) => e.sourceHandle === result.nextPath || e.sourceAnchor === result.nextPath);
           if (!edge) {
-            await this.updateNodeExecutionState(executionId, currentNode.id, 'failed',
-              `No outgoing edge found for branch ${result.nextPath}`);
+            this.setNodeState(nodeStates, currentNode.id, 'failed', {
+              error: `No outgoing edge found for branch ${result.nextPath}`
+            });
+            await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
             await this.updateExecutionStatus(executionId, 'failed', context.variables);
             return;
           }
@@ -251,12 +292,15 @@ export class EnhancedWorkflowRuntimeService {
 
         if (!edge) break;
 
-        await this.updateEdgeExecutionState(executionId, edge.id, 'active', result.nextPath);
+        this.setEdgeState(edgeStates, edge.id, 'active', result.nextPath);
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
+
         currentNode = graph.nodes.find((n: any) => n.id === edge.target);
 
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(`Error in node ${currentNode.id}: ${error.message}`);
-        await this.updateNodeExecutionState(executionId, currentNode.id, 'failed', error.message);
+        this.setNodeState(nodeStates, currentNode.id, 'failed', { error: error.message });
+        await this.persistStateSnapshot(executionId, nodeStates, edgeStates);
         await this.updateExecutionStatus(executionId, 'failed', context.variables);
         return;
       }
@@ -265,107 +309,76 @@ export class EnhancedWorkflowRuntimeService {
     await this.updateExecutionStatus(executionId, 'success', context.variables);
   }
 
-  private async initializeExecutionState(executionId: string, graph: any) {
-    // Create initial execution state records
-    const nodeStates = graph.nodes.map((node: any) => ({
-      executionId,
-      nodeId: node.id,
-      state: 'idle' as NodeExecutionState,
-      startedAt: null,
-      completedAt: null,
-      duration: null,
-      error: null,
-      retryCount: 0,
-      output: null,
-      input: null,
-      branchTaken: null
-    }));
+  // ─── In-memory state helpers ────────────────────────────────────
 
-    const edgeStates = graph.edges.map((edge: any) => ({
-      executionId,
-      edgeId: edge.id,
-      state: 'inactive' as EdgeExecutionState,
-      executedAt: null,
-      executionCount: 0,
-      branchType: edge.sourceAnchor || edge.label || null
-    }));
-
-    await this.prisma.executionNodeState.createMany({ data: nodeStates });
-    await this.prisma.executionEdgeState.createMany({ data: edgeStates });
-  }
-
-  private async updateNodeExecutionState(
-    executionId: string,
+  private setNodeState(
+    states: NodeExecutionMetadata[],
     nodeId: string,
     state: NodeExecutionState,
-    error?: string,
-    output?: any,
-    branchTaken?: string
+    extra: Partial<NodeExecutionMetadata> = {}
   ) {
-    const now = new Date();
-
-    await this.prisma.executionNodeState.upsert({
-      where: {
-        executionId_nodeId: { executionId, nodeId }
-      },
-      update: {
-        state,
-        completedAt: ['success', 'failed', 'skipped', 'cancelled'].includes(state) ? now : null,
-        duration: state === 'running' ? null : undefined, // Will be calculated
-        error,
-        output,
-        branchTaken
-      },
-      create: {
-        executionId,
-        nodeId,
-        state,
-        startedAt: state === 'running' ? now : null,
-        completedAt: ['success', 'failed', 'skipped', 'cancelled'].includes(state) ? now : null,
-        error,
-        output,
-        branchTaken
-      }
-    });
-
-    // Log the execution step
-    await this.prisma.workflowLog.create({
-      data: {
-        executionId,
-        nodeId,
-        nodeType: 'unknown', // Will be updated by handler
-        status: state,
-        input: null,
-        output,
-        error
-      }
-    });
+    const existing = states.find(s => s.nodeId === nodeId);
+    if (existing) {
+      Object.assign(existing, { state, ...extra });
+    } else {
+      states.push({ nodeId, state, retryCount: 0, ...extra });
+    }
   }
 
-  private async updateEdgeExecutionState(
-    executionId: string,
+  private setEdgeState(
+    states: EdgeExecutionMetadata[],
     edgeId: string,
     state: EdgeExecutionState,
     branchType?: string
   ) {
-    await this.prisma.executionEdgeState.upsert({
-      where: {
-        executionId_edgeId: { executionId, edgeId }
+    const existing = states.find(s => s.edgeId === edgeId);
+    if (existing) {
+      existing.state = state;
+      existing.executedAt = new Date();
+      existing.executionCount = (existing.executionCount || 0) + 1;
+      if (branchType) existing.branchType = branchType;
+    } else {
+      states.push({ edgeId, state, executedAt: new Date(), executionCount: 1, branchType });
+    }
+  }
+
+  // ─── Persistence helpers ────────────────────────────────────────
+
+  /**
+   * Stores the current node/edge execution states as a JSON snapshot
+   * inside the WorkflowExecution.result field. This avoids needing
+   * separate database tables for per-node/per-edge state.
+   */
+  private async persistStateSnapshot(
+    executionId: string,
+    nodeStates: NodeExecutionMetadata[],
+    edgeStates: EdgeExecutionMetadata[]
+  ) {
+    await this.prisma.workflowExecution.update({
+      where: { id: executionId },
+      data: {
+        result: { nodeStates, edgeStates } as unknown as Prisma.InputJsonValue,
       },
-      update: {
-        state,
-        executedAt: new Date(),
-        executionCount: { increment: 1 },
-        branchType
-      },
-      create: {
+    });
+  }
+
+  private async logNode(
+    executionId: string,
+    node: any,
+    status: string,
+    output?: any,
+    error?: string
+  ) {
+    await this.prisma.workflowLog.create({
+      data: {
         executionId,
-        edgeId,
-        state,
-        executedAt: new Date(),
-        executionCount: 1,
-        branchType
-      }
+        nodeId: node.id,
+        nodeType: node.subType || 'unknown',
+        status,
+        input: Prisma.JsonNull,
+        output: output ? (output as Prisma.InputJsonValue) : Prisma.JsonNull,
+        error,
+      },
     });
   }
 
@@ -397,13 +410,14 @@ export class EnhancedWorkflowRuntimeService {
   async getExecutionState(executionId: string): Promise<WorkflowExecutionSnapshot | null> {
     const execution = await this.prisma.workflowExecution.findUnique({
       where: { id: executionId },
-      include: {
-        nodeStates: true,
-        edgeStates: true
-      }
     });
 
     if (!execution) return null;
+
+    // Read the state snapshot from the result JSON field
+    const snapshot = (execution.result as any) || { nodeStates: [], edgeStates: [] };
+    const nodeStates: NodeExecutionMetadata[] = snapshot.nodeStates || [];
+    const edgeStates: EdgeExecutionMetadata[] = snapshot.edgeStates || [];
 
     return {
       executionId: execution.id,
@@ -411,35 +425,18 @@ export class EnhancedWorkflowRuntimeService {
       status: execution.status as any,
       startedAt: execution.startTime,
       completedAt: execution.endTime || undefined,
-      currentNodeId: execution.nodeStates.find(s => s.state === 'running')?.nodeId,
-      nodeStates: execution.nodeStates.map(s => ({
-        nodeId: s.nodeId,
-        state: s.state as NodeExecutionState,
-        startedAt: s.startedAt || undefined,
-        completedAt: s.completedAt || undefined,
-        duration: s.duration || undefined,
-        error: s.error || undefined,
-        retryCount: s.retryCount,
-        output: s.output,
-        input: s.input,
-        branchTaken: s.branchTaken || undefined
-      })),
-      edgeStates: execution.edgeStates.map(s => ({
-        edgeId: s.edgeId,
-        state: s.state as EdgeExecutionState,
-        executedAt: s.executedAt || undefined,
-        executionCount: s.executionCount,
-        branchType: s.branchType || undefined
-      })),
+      currentNodeId: nodeStates.find(s => s.state === 'running')?.nodeId,
+      nodeStates,
+      edgeStates,
       variables: execution.context as Record<string, any>,
-      progress: this.calculateProgress(execution.nodeStates)
+      progress: this.calculateProgress(nodeStates)
     };
   }
 
-  private calculateProgress(nodeStates: any[]): number {
+  private calculateProgress(nodeStates: NodeExecutionMetadata[]): number {
     if (nodeStates.length === 0) return 0;
 
-    const completedStates = ['success', 'failed', 'skipped'];
+    const completedStates: NodeExecutionState[] = ['success', 'failed', 'skipped'];
     const completed = nodeStates.filter(s => completedStates.includes(s.state)).length;
 
     return Math.round((completed / nodeStates.length) * 100);

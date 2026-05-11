@@ -51,9 +51,14 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
           [class.selected]="state.selectedNode()?.id === node.id" 
           [style.left.px]="node.position.x"
           [style.top.px]="node.position.y"
+          [class.status-idle]="node.status === 'idle'"
+          [class.status-queued]="node.status === 'queued'"
           [class.status-running]="node.status === 'running'"
           [class.status-success]="node.status === 'success'"
-          [class.status-error]="node.status === 'error'"
+          [class.status-error]="node.status === 'error' || node.status === 'failed'"
+          [class.status-waiting]="node.status === 'waiting'"
+          [class.status-skipped]="node.status === 'skipped'"
+          [class.status-cancelled]="node.status === 'cancelled'"
           (mousedown)="onNodeMouseDown($event, node.id)"
         >
           <div class="node-card">
@@ -64,11 +69,41 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
             
             <div class="node-content">
               <div class="node-title">{{ node.label }}</div>
-              <div class="node-status" *ngIf="node.status !== 'idle'">
-                <span *ngIf="node.status === 'running'" class="status-spinner"></span>
-                <span *ngIf="node.status === 'success'">✅</span>
-                <span *ngIf="node.status === 'error'">❌</span>
+              <!-- Runtime Status Badge -->
+              <div class="node-status-badge" *ngIf="node.status !== 'idle'">
+                <ng-container [ngSwitch]="node.status">
+                  <span *ngSwitchCase="'queued'" class="badge badge-queued" title="Queued">
+                    <span class="material-icons">hourglass_empty</span>
+                  </span>
+                  <span *ngSwitchCase="'running'" class="badge badge-running" title="Running">
+                    <span class="material-icons icon-spin">sync</span>
+                  </span>
+                  <span *ngSwitchCase="'success'" class="badge badge-success" title="Success">
+                    <span class="material-icons">check_circle</span>
+                  </span>
+                  <span *ngSwitchCase="'error'" class="badge badge-error" title="Failed">
+                    <span class="material-icons">error</span>
+                  </span>
+                  <span *ngSwitchCase="'failed'" class="badge badge-error" title="Failed">
+                    <span class="material-icons">error</span>
+                  </span>
+                  <span *ngSwitchCase="'waiting'" class="badge badge-waiting" title="Awaiting Input">
+                    <span class="material-icons">pause_circle</span>
+                  </span>
+                  <span *ngSwitchCase="'skipped'" class="badge badge-skipped" title="Skipped">
+                    <span class="material-icons">block</span>
+                  </span>
+                  <span *ngSwitchCase="'cancelled'" class="badge badge-cancelled" title="Cancelled">
+                    <span class="material-icons">cancel</span>
+                  </span>
+                </ng-container>
               </div>
+            </div>
+
+            <!-- Error tooltip -->
+            <div class="node-error-bar" *ngIf="node.errorMessage">
+              <span class="material-icons">warning</span>
+              <span class="error-text">{{ node.errorMessage }}</span>
             </div>
 
             <!-- Connection Anchors -->
@@ -222,25 +257,106 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
       z-index: 100;
     }
 
-    /* Status Animations */
-    .workflow-node.status-running .node-card { border-color: var(--accent); animation: pulse 1.5s infinite; }
-    .workflow-node.status-success .node-card { border-color: #10b981; }
-    .workflow-node.status-error .node-card { border-color: #ef4444; }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.4); }
-      70% { box-shadow: 0 0 0 8px rgba(var(--accent-rgb), 0); }
-      100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
-    }
-
-    .status-spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(var(--accent-rgb), 0.1);
-      border-top-color: var(--accent);
+    /* ─── Runtime Status Badges ─── */
+    .node-status-badge { display: flex; align-items: center; }
+    .badge {
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .badge .material-icons { font-size: 1.1rem; }
+
+    .badge-queued { color: #a78bfa; }
+    .badge-running { color: #3b82f6; }
+    .badge-success { color: #22c55e; }
+    .badge-error { color: #ef4444; }
+    .badge-waiting { color: #f59e0b; }
+    .badge-skipped { color: #94a3b8; }
+    .badge-cancelled { color: #6b7280; }
+
+    .icon-spin { animation: icon-rotate 1s linear infinite; }
+    @keyframes icon-rotate { to { transform: rotate(360deg); } }
+
+    /* ─── Error Bar ─── */
+    .node-error-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      background: rgba(239, 68, 68, 0.08);
+      border-top: 1px solid rgba(239, 68, 68, 0.15);
+      border-radius: 0 0 12px 12px;
+      color: #ef4444;
+    }
+    .node-error-bar .material-icons { font-size: 0.85rem; }
+    .error-text { font-size: 0.65rem; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+
+    /* ─── Node Execution State Animations ─── */
+
+    /* Queued — subtle purple border */
+    .workflow-node.status-queued .node-card {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.1);
+    }
+
+    /* Running — blue glow + pulsing shadow */
+    .workflow-node.status-running .node-card {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.15), 0 0 24px rgba(59,130,246,0.08);
+      animation: pulse-running 2s ease-in-out infinite;
+    }
+    @keyframes pulse-running {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(59,130,246,0.15), 0 0 24px rgba(59,130,246,0.08); }
+      50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.25), 0 0 32px rgba(59,130,246,0.15); }
+    }
+
+    /* Success — green glow + pop-in */
+    .workflow-node.status-success .node-card {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+      animation: pop-success 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop-success {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    /* Error/Failed — red glow + shake */
+    .workflow-node.status-error .node-card {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+      animation: shake-error 0.5s cubic-bezier(.36,.07,.19,.97);
+    }
+    @keyframes shake-error {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+      20%, 40%, 60%, 80% { transform: translateX(3px); }
+    }
+
+    /* Waiting — amber pulse */
+    .workflow-node.status-waiting .node-card {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+      animation: pulse-waiting 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-waiting {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+      50% { box-shadow: 0 0 0 6px rgba(245,158,11,0.2), 0 0 20px rgba(245,158,11,0.08); }
+    }
+
+    /* Skipped — faded + dashed */
+    .workflow-node.status-skipped .node-card {
+      opacity: 0.45;
+      border-style: dashed;
+      border-color: var(--border);
+      filter: saturate(0.4);
+    }
+
+    /* Cancelled — gray + dimmed */
+    .workflow-node.status-cancelled .node-card {
+      opacity: 0.35;
+      filter: grayscale(1);
+      border-color: #6b7280;
+    }
 
     .canvas-ui {
       position: absolute;
@@ -371,6 +487,13 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
       if (!this.renderedEdgeIds.has(edge.id)) {
         this.graph.connect(edge.source, edge.target, edge);
         this.renderedEdgeIds.add(edge.id);
+      }
+    });
+
+    // 3. Update runtime execution state styling on existing edges
+    edges.forEach(edge => {
+      if (edge.executionState && edge.executionState !== 'inactive') {
+        this.graph.updateEdgeState(edge.id, edge.executionState);
       }
     });
   }

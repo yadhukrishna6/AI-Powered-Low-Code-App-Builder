@@ -6,10 +6,26 @@ export class ApprovalHandler implements NodeHandler {
   async execute(node: any, context: ExecutionContext): Promise<NodeResult> {
     const { approverRole, timeout } = node.data || {};
 
-    // For now, simulate approval by returning 'waiting' status
-    // In a real implementation, this would trigger an approval workflow
-    // and wait for user input via the UI
+    // Check if we are resuming from a user action
+    const resumeAction = context.variables?.resumeAction;
 
+    if (resumeAction === 'approve') {
+      return {
+        status: 'success',
+        nextPath: 'approved',
+        output: { approvalStatus: 'approved', approvedBy: 'manual-ui' }
+      };
+    }
+
+    if (resumeAction === 'reject') {
+      return {
+        status: 'success',
+        nextPath: 'rejected',
+        output: { approvalStatus: 'rejected', rejectedBy: 'manual-ui' }
+      };
+    }
+
+    // Default: Pause and wait for user input
     return {
       status: 'waiting',
       output: {

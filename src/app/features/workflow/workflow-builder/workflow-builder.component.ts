@@ -7,6 +7,7 @@ import { WorkflowRuntimeService } from '../execution/workflow-runtime.service';
 import { NodePaletteComponent } from '../palette/node-palette.component';
 import { WorkflowCanvasComponent } from '../canvas/workflow-canvas.component';
 import { PropertiesPanelComponent } from '../properties-panel/properties-panel.component';
+import { ExecutionLogsComponent } from '../execution/execution-logs.component';
 import { ModalService } from '../../../core/services/modal.service';
 
 @Component({
@@ -16,7 +17,8 @@ import { ModalService } from '../../../core/services/modal.service';
     CommonModule,
     NodePaletteComponent,
     WorkflowCanvasComponent,
-    PropertiesPanelComponent
+    PropertiesPanelComponent,
+    ExecutionLogsComponent
   ],
   template: `
     <div class="workflow-container">
@@ -66,9 +68,10 @@ import { ModalService } from '../../../core/services/modal.service';
           <app-node-palette></app-node-palette>
         </aside>
 
-        <!-- Right Properties -->
+        <!-- Right Properties or Logs -->
         <aside class="side-panel panel-right" style="order: 3;">
-          <app-properties-panel></app-properties-panel>
+          <app-execution-logs *ngIf="showLogs()"></app-execution-logs>
+          <app-properties-panel *ngIf="!showLogs()"></app-properties-panel>
         </aside>
       </div>
     </div>
@@ -203,6 +206,7 @@ export class WorkflowBuilderComponent implements OnInit {
   modal = inject(ModalService);
 
   isRunning = computed(() => this.runtime.activeExecutionContext()?.status === 'active');
+  showLogs = computed(() => this.runtime.activeExecutionContext() !== null);
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -256,7 +260,20 @@ export class WorkflowBuilderComponent implements OnInit {
   async runWorkflow() {
     const workflow = this.state.workflow();
     this.runtime.resetWorkflowStatus(workflow);
-    await this.runtime.executeWorkflow(workflow);
+    
+    // Check if the workflow has input dependencies (like the 'date' field that failed earlier)
+    const variablesRaw = prompt('Enter initial variables (JSON) for testing (optional):', '{}');
+    let variables = {};
+    
+    try {
+      if (variablesRaw) {
+        variables = JSON.parse(variablesRaw);
+      }
+    } catch (e) {
+      console.warn('Invalid JSON for variables, starting with empty context.');
+    }
+
+    await this.runtime.executeWorkflow(workflow, variables);
   }
 
   async saveWorkflow() {

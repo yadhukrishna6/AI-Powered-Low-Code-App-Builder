@@ -6,7 +6,10 @@ export class StartNodeHandler implements NodeHandler {
   async execute(node: any, context: ExecutionContext): Promise<NodeResult> {
     return {
       status: 'success',
-      output: { message: 'Workflow started' }
+      output: { 
+        message: 'Workflow started',
+        ...context.variables 
+      }
     };
   }
 }

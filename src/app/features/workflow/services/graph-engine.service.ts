@@ -195,4 +195,55 @@ export class GraphEngineService {
       this.instance.reset();
     }
   }
+
+  // ─── Edge Runtime Styling ───────────────────────────────────────
+
+  private edgeStateColors: Record<string, string> = {
+    'inactive': '#94a3b8',
+    'active': '#3b82f6',
+    'success-path': '#22c55e',
+    'failed-path': '#ef4444',
+    'skipped-path': '#64748b'
+  };
+
+  private edgeStateWidths: Record<string, number> = {
+    'inactive': 2,
+    'active': 3,
+    'success-path': 2.5,
+    'failed-path': 2.5,
+    'skipped-path': 1.5
+  };
+
+  updateEdgeState(edgeId: string, state: string) {
+    if (!this.instance) return;
+    const connections = this.instance.getAllConnections() as any[];
+    const conn = connections.find(c => c.getParameter('id') === edgeId);
+    if (!conn) return;
+
+    const color = this.edgeStateColors[state] || '#94a3b8';
+    const width = this.edgeStateWidths[state] || 2;
+
+    conn.setPaintStyle({ stroke: color, strokeWidth: width });
+    conn.setHoverPaintStyle({ stroke: color, strokeWidth: width + 1.5, opacity: 0.8 });
+
+    // Update arrow overlay color
+    const arrow = conn.getOverlay('arrow') || conn.getOverlays()?.[0];
+    if (arrow) {
+      try { arrow.setVisible(true); } catch (_) {}
+    }
+
+    // Add dash for skipped/inactive
+    if (state === 'skipped-path') {
+      conn.setPaintStyle({ stroke: color, strokeWidth: width, dashstyle: '4 3' });
+    }
+  }
+
+  resetAllEdgeStates() {
+    if (!this.instance) return;
+    const connections = this.instance.getAllConnections() as any[];
+    connections.forEach(conn => {
+      conn.setPaintStyle({ stroke: '#94a3b8', strokeWidth: 2 });
+      conn.setHoverPaintStyle({ stroke: '#3b82f6', strokeWidth: 3 });
+    });
+  }
 }

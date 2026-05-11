@@ -120,7 +120,12 @@ let WorkflowsService = class WorkflowsService {
     async getExecution(executionId) {
         return this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { logs: true },
+            include: {
+                logs: true,
+                workflow: {
+                    select: { graph: true }
+                }
+            },
         });
     }
     async resumeExecution(executionId, action) {

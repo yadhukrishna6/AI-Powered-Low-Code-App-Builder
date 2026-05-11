@@ -12,7 +12,10 @@ let StartNodeHandler = class StartNodeHandler {
     async execute(node, context) {
         return {
             status: 'success',
-            output: { message: 'Workflow started' }
+            output: {
+                message: 'Workflow started',
+                ...context.variables
+            }
         };
     }
 };
