@@ -14,7 +14,7 @@ import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { WorkflowStateService } from '../services/workflow-state.service';
 import { GraphEngineService } from '../services/graph-engine.service';
 import { NodeRegistryService } from '../registry/node-registry.service';
-import { WorkflowNode, Position } from '../models/workflow.model';
+import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
 
 @Component({
   selector: 'app-workflow-canvas',
@@ -48,7 +48,7 @@ import { WorkflowNode, Position } from '../models/workflow.model';
           *ngFor="let node of state.nodes(); trackBy: trackByNode"
           [id]="node.id"
           class="workflow-node"
-          [class.selected]="state.workflow().nodes[0].id === node.id" 
+          [class.selected]="state.selectedNode()?.id === node.id" 
           [style.left.px]="node.position.x"
           [style.top.px]="node.position.y"
           [class.status-running]="node.status === 'running'"
@@ -71,9 +71,16 @@ import { WorkflowNode, Position } from '../models/workflow.model';
               </div>
             </div>
 
-            <!-- Connection Anchors (jsPlumb will target these) -->
+            <!-- Connection Anchors -->
             <div class="anchor anchor-in handle-in" title="Input"></div>
-            <div class="anchor anchor-out handle-out" title="Output"></div>
+            <div 
+              *ngIf="node.subType !== 'end'"
+              class="anchor anchor-out handle-out" 
+              [class.anchor-trigger]="node.type === 'trigger'"
+              [class.anchor-logic]="node.type === 'logic'"
+              [class.anchor-action]="node.type === 'action'"
+              title="Drag to connect"
+            ></div>
           </div>
         </div>
       </div>
@@ -128,11 +135,21 @@ import { WorkflowNode, Position } from '../models/workflow.model';
 
     .node-card {
       background: var(--bg-secondary);
-      border: 2px solid var(--border);
+      border: 1px solid var(--border);
       border-radius: 12px;
       overflow: visible; /* Important for anchors */
-      box-shadow: var(--card-shadow);
-      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .node-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+      pointer-events: none;
     }
 
     .workflow-node.selected .node-card {
@@ -176,12 +193,34 @@ import { WorkflowNode, Position } from '../models/workflow.model';
 
     .anchor:hover {
       background: var(--accent);
-      border-color: var(--accent);
-      transform: scale(1.3);
+      border-color: var(--accent) !important;
+      transform: scale(1.4) translateY(-35%);
+      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
     }
 
     .anchor-in { left: -6px; top: 50%; transform: translateY(-50%); }
     .anchor-out { right: -6px; top: 50%; transform: translateY(-50%); }
+
+    /* Type-specific Anchor Colors */
+    .anchor-trigger { border-color: #10b981 !important; }
+    .anchor-action { border-color: #3b82f6 !important; }
+    .anchor-logic { border-color: #f59e0b !important; }
+
+    /* Edge Labels */
+    ::ng-deep .workflow-edge-label {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      pointer-events: none;
+      z-index: 100;
+    }
 
     /* Status Animations */
     .workflow-node.status-running .node-card { border-color: var(--accent); animation: pulse 1.5s infinite; }
@@ -248,30 +287,27 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
   private lastMousePos: Position = { x: 0, y: 0 };
 
   private previousNodeIds = new Set<string>();
+  private renderedEdgeIds = new Set<string>();
 
   constructor() {
-    // Sync jsPlumb with state changes
+    // Sync nodes with state
     effect(() => {
       const currentNodes = this.state.nodes();
       const currentIds = new Set(currentNodes.map(n => n.id));
 
-      // Handle Removals
       this.previousNodeIds.forEach(id => {
-        if (!currentIds.has(id)) {
-          this.graph.removeNode(id);
-        }
+        if (!currentIds.has(id)) this.graph.removeNode(id);
       });
 
-      // Handle Additions
       setTimeout(() => {
         currentNodes.forEach(node => {
-          if (!this.previousNodeIds.has(node.id)) {
-            this.graph.addNode(node.id);
-          }
+          if (!this.previousNodeIds.has(node.id)) this.graph.addNode(node.id);
         });
         this.previousNodeIds = currentIds;
       }, 0);
     });
+
+    // Sync edges with state
     effect(() => {
       const edges = this.state.edges();
       setTimeout(() => this.syncEdgesWithGraph(edges), 0);
@@ -280,16 +316,57 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     this.graph.initialize(this.nodesContainer.nativeElement);
+    
+    // Listen for manual connections made on the canvas
+    this.graph.onConnection(async (info) => {
+      // 1. Always detach the raw user-dragged connection
+      // We will redraw it programmatically if confirmed
+      this.graph.detachConnection(info.connection);
+
+      const sourceNode = this.state.nodes().find(n => n.id === info.sourceId);
+      if (!sourceNode) return;
+
+      const registryEntry = this.registry.getEntry(sourceNode.subType);
+      const branches = registryEntry.branches || [{ id: 'main', label: 'Main' }];
+
+      if (branches.length <= 1) {
+        this.state.addEdge(info.sourceId, info.targetId, branches[0].id);
+        return;
+      }
+
+      const existingEdges = this.state.edges().filter(e => e.source === info.sourceId);
+      const availableBranches = branches.filter(b => !existingEdges.some(e => e.sourceAnchor === b.id));
+
+      if (availableBranches.length === 0) return;
+
+      const selection = await this.state.promptBranchSelection(availableBranches);
+      if (selection) {
+        this.state.addEdge(info.sourceId, info.targetId, selection);
+      }
+    });
   }
 
   ngOnDestroy() {
     this.graph.clear();
   }
 
-  private syncEdgesWithGraph(edges: any[]) {
-    // Programmatic connections from state
+  private syncEdgesWithGraph(edges: WorkflowEdge[]) {
+    const currentEdgeIds = new Set(edges.map(e => e.id));
+
+    // 1. Remove edges that no longer exist in state
+    this.renderedEdgeIds.forEach(id => {
+      if (!currentEdgeIds.has(id)) {
+        this.graph.removeEdgeById(id);
+        this.renderedEdgeIds.delete(id);
+      }
+    });
+
+    // 2. Add new edges that haven't been rendered yet
     edges.forEach(edge => {
-      this.graph.connect(edge.source, edge.target, edge);
+      if (!this.renderedEdgeIds.has(edge.id)) {
+        this.graph.connect(edge.source, edge.target, edge);
+        this.renderedEdgeIds.add(edge.id);
+      }
     });
   }
 

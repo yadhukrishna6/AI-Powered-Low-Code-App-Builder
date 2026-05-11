@@ -25,6 +25,7 @@ export interface WorkflowEdge {
   sourceAnchor?: string; // e.g., 'true', 'false', 'default'
   targetAnchor?: string;
   label?: string;
+  color?: string;
   type?: 'default' | 'success' | 'failure' | 'conditional';
 }
 

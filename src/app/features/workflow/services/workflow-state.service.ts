@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Workflow, WorkflowNode, WorkflowEdge, Position, ExecutionStatus } from '../models/workflow.model';
 import { NodeRegistryService } from '../registry/node-registry.service';
+import { ModalService } from '../../../core/services/modal.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
@@ -166,11 +167,34 @@ export class WorkflowStateService {
     if (this._selectedNodeId() === nodeId) this._selectedNodeId.set(null);
   }
 
+  private modal = inject(ModalService);
+
+  async promptBranchSelection(branches: { id: string, label: string, color?: string }[]): Promise<string | null> {
+    return await this.modal.show({
+      title: 'Select Path',
+      message: 'Choose which branch to connect for this automation path:',
+      type: 'select',
+      confirmText: 'Connect',
+      options: branches.map(b => ({ label: b.label, value: b.id, color: b.color }))
+    }) as string | null;
+  }
+
   addEdge(sourceId: string, targetId: string, sourceAnchor?: string, targetAnchor?: string) {
     const exists = this._workflow().edges.some(
       e => e.source === sourceId && e.target === targetId && e.sourceAnchor === sourceAnchor
     );
     if (exists || sourceId === targetId) return;
+
+    // Resolve branch label and color for the edge
+    const sourceNode = this._workflow().nodes.find(n => n.id === sourceId);
+    let label = '';
+    let color = '';
+    if (sourceNode && sourceAnchor) {
+      const entry = this.nodeRegistry.getEntry(sourceNode.subType);
+      const branch = entry.branches?.find(b => b.id === sourceAnchor);
+      label = branch?.label || '';
+      color = branch?.color || '';
+    }
 
     const newEdge: WorkflowEdge = {
       id: `edge_${uuidv4().substring(0, 8)}`,
@@ -178,6 +202,8 @@ export class WorkflowStateService {
       target: targetId,
       sourceAnchor,
       targetAnchor,
+      label,
+      color,
       type: 'default'
     };
 

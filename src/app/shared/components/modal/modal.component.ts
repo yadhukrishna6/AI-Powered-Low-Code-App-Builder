@@ -29,6 +29,21 @@ import { ModalService } from '../../../core/services/modal.service';
               autofocus
             >
           </div>
+
+          <div class="selection-list" *ngIf="modal.config()?.type === 'select'">
+            <button 
+              *ngFor="let opt of modal.config()?.options"
+              class="selection-item"
+              [class.active]="selectedOption === opt.value"
+              (click)="selectedOption = opt.value"
+            >
+              <div class="opt-main">
+                <div class="path-indicator" [style.background-color]="opt.color"></div>
+                <span class="opt-label">{{ opt.label }}</span>
+              </div>
+              <span class="material-icons check" *ngIf="selectedOption === opt.value">check_circle</span>
+            </button>
+          </div>
         </div>
 
         <footer class="modal-footer">
@@ -37,7 +52,8 @@ import { ModalService } from '../../../core/services/modal.service';
           </button>
           <button 
             [class]="'btn-' + (modal.config()?.type || 'primary')" 
-            (click)="modal.confirm(modal.config()?.type === 'prompt' ? inputValue : true)"
+            [disabled]="modal.config()?.type === 'select' && !selectedOption"
+            (click)="onConfirm()"
           >
             {{ modal.config()?.confirmText || 'Confirm' }}
           </button>
@@ -126,6 +142,24 @@ import { ModalService } from '../../../core/services/modal.service';
     .btn-danger { background: #ef4444; color: white; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; }
     button:hover { filter: brightness(1.1); }
 
+    .selection-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .selection-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem; background: var(--bg-primary); border: 1px solid var(--border);
+      border-radius: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer; text-align: left;
+    }
+    .selection-item:hover { border-color: var(--accent); background: var(--input-bg); transform: translateX(4px); }
+    .selection-item.active { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); }
+    .opt-main { display: flex; align-items: center; gap: 12px; }
+    .path-indicator { 
+      width: 10px; height: 10px; 
+      border-radius: 50%; 
+      box-shadow: 0 0 8px rgba(0,0,0,0.2); 
+    }
+    .opt-label { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+    .check { color: var(--accent); font-size: 1.25rem; }
+
     .fade-in { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   `]
@@ -133,13 +167,28 @@ import { ModalService } from '../../../core/services/modal.service';
 export class ModalComponent {
   modal = inject(ModalService);
   inputValue = '';
+  selectedOption: any = null;
 
   constructor() {
     effect(() => {
       const isOpen = this.modal.isOpen();
       if (isOpen) {
         this.inputValue = this.modal.config()?.initialValue || '';
+        this.selectedOption = null;
       }
     });
+  }
+
+  onConfirm() {
+    const config = this.modal.config();
+    if (!config) return;
+
+    if (config.type === 'prompt') {
+      this.modal.confirm(this.inputValue);
+    } else if (config.type === 'select') {
+      this.modal.confirm(this.selectedOption);
+    } else {
+      this.modal.confirm(true);
+    }
   }
 }

@@ -19,6 +19,7 @@ export interface NodeRegistryEntry {
   description: string;
   defaultData: any;
   properties?: NodeProperty[];
+  branches?: { id: string, label: string, color?: string }[];
 }
 
 export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
@@ -60,7 +61,8 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     defaultData: { formId: '' },
     properties: [
       { key: 'formId', label: 'Select Form', type: 'form-picker' }
-    ]
+    ],
+    branches: [{ id: 'main', label: 'Main' }]
   },
   'schedule': {
     subType: 'schedule',
@@ -89,6 +91,10 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
       { key: 'field', label: 'Field to Check', type: 'variable-picker' },
       { key: 'operator', label: 'Operator', type: 'select', options: ['==', '!=', '>', '<', 'contains'] },
       { key: 'value', label: 'Value', type: 'text' }
+    ],
+    branches: [
+      { id: 'true', label: 'TRUE', color: '#10b981' },
+      { id: 'false', label: 'FALSE', color: '#ef4444' }
     ]
   },
   'switch': {
@@ -115,6 +121,10 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     properties: [
       { key: 'sourceArray', label: 'Source Array', type: 'variable-picker' },
       { key: 'concurrency', label: 'Concurrency', type: 'number' }
+    ],
+    branches: [
+      { id: 'next', label: 'Next Item', color: '#3b82f6' },
+      { id: 'done', label: 'Completed', color: '#10b981' }
     ]
   },
   'delay': {
@@ -143,6 +153,10 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     properties: [
       { key: 'approverRole', label: 'Approver Role', type: 'select', options: ['admin', 'manager', 'hr'] },
       { key: 'timeout', label: 'Timeout (hours)', type: 'number' }
+    ],
+    branches: [
+      { id: 'approved', label: 'Approved', color: '#10b981' },
+      { id: 'rejected', label: 'Rejected', color: '#ef4444' }
     ]
   },
   'send-notification': {
@@ -171,6 +185,10 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
       { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'DELETE'] },
       { key: 'url', label: 'URL', type: 'text' },
       { key: 'body', label: 'JSON Body', type: 'textarea' }
+    ],
+    branches: [
+      { id: 'success', label: 'Success', color: '#10b981' },
+      { id: 'failure', label: 'Error', color: '#ef4444' }
     ]
   },
   'save-data': {

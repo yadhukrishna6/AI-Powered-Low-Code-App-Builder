@@ -4,11 +4,12 @@ import { Injectable, signal } from '@angular/core';
 export interface ModalConfig {
   title: string;
   message: string;
-  type?: 'info' | 'success' | 'warning' | 'danger' | 'prompt';
+  type?: 'info' | 'success' | 'warning' | 'danger' | 'prompt' | 'select';
   confirmText?: string;
   cancelText?: string;
   placeholder?: string;
   initialValue?: string;
+  options?: { label: string, value: any }[];
 }
 
 @Injectable({
