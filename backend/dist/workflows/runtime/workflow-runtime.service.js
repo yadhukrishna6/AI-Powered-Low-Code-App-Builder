@@ -56,6 +56,7 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
                     return;
                 }
                 if (result.status === 'waiting') {
+                    this.logger.log(`Workflow ${executionId} reached a waiting state at node ${currentNode.id}`);
                     await this.updateExecutionStatus(executionId, 'waiting', context.variables);
                     return;
                 }
@@ -118,7 +119,9 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
             where: { id: executionId },
             include: { workflow: true },
         });
-        if (!execution || execution.status !== 'waiting')
+        if (!execution)
+            return;
+        if (execution.status !== 'waiting' && execution.status !== 'running' && execution.status !== 'active')
             return;
         const graph = execution.workflow.graph;
         const context = {

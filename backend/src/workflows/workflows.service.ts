@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRuntimeService } from './runtime/workflow-runtime.service';
 
@@ -136,11 +136,14 @@ export class WorkflowsService {
   async resumeExecution(executionId: string, action: 'approve' | 'reject') {
     const execution = await this.prisma.workflowExecution.findUnique({
       where: { id: executionId },
-      include: { workflow: true },
     });
 
-    if (!execution || execution.status !== 'waiting') {
-      throw new NotFoundException(`Execution ${executionId} not found or not waiting`);
+    if (!execution) {
+      throw new NotFoundException(`Execution ${executionId} not found`);
+    }
+
+    if (execution.status !== 'waiting' && execution.status !== 'running' && execution.status !== 'active') {
+      throw new BadRequestException(`Cannot resume execution ${executionId}. Current status is '${execution.status}', but it must be 'waiting' or 'active'.`);
     }
 
     // Update execution with resume action

@@ -131,10 +131,12 @@ let WorkflowsService = class WorkflowsService {
     async resumeExecution(executionId, action) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
         });
-        if (!execution || execution.status !== 'waiting') {
-            throw new common_1.NotFoundException(`Execution ${executionId} not found or not waiting`);
+        if (!execution) {
+            throw new common_1.NotFoundException(`Execution ${executionId} not found`);
+        }
+        if (execution.status !== 'waiting' && execution.status !== 'running' && execution.status !== 'active') {
+            throw new common_1.BadRequestException(`Cannot resume execution ${executionId}. Current status is '${execution.status}', but it must be 'waiting' or 'active'.`);
         }
         await this.prisma.workflowExecution.update({
             where: { id: executionId },

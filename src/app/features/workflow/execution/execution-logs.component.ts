@@ -33,7 +33,7 @@ import { WorkflowStateService } from '../services/workflow-state.service';
       </div>
 
       <div class="timeline thin-scrollbar">
-        <div class="timeline-item" *ngFor="let step of context()?.history; let last = last">
+        <div class="timeline-item" *ngFor="let step of context()?.history; trackBy: trackByLogId">
           <div class="item-marker" [class.success]="step.success" [class.error]="!step.success">
             <span class="material-icons">{{ step.success ? 'check_circle' : 'error' }}</span>
           </div>
@@ -86,21 +86,23 @@ import { WorkflowStateService } from '../services/workflow-state.service';
         </div>
         
         <!-- Waiting Indicator -->
-        <div class="timeline-item waiting" *ngIf="hasWaitingNode()">
+        <div class="timeline-item waiting" *ngFor="let node of waitingNodes()">
           <div class="item-marker warning pulse">
             <span class="material-icons">pause_circle</span>
           </div>
           <div class="item-content">
             <div class="item-card waiting">
               <div class="item-header">
-                <span class="node-label">Awaiting User Action</span>
+                <span class="node-label">{{ node.label }}</span>
+                <span class="status-text">Awaiting Action</span>
               </div>
-              <p class="waiting-msg">Execution is paused. Please approve or reject this step to continue.</p>
+              <p class="waiting-msg">This step requires manual approval to proceed.</p>
               <div class="item-actions">
-                <button class="btn-approve" (click)="resume('approve')">
-                  <span class="material-icons">check</span> Approve
+                <button class="btn-approve" (click)="resume(node.id, 'approve')" [disabled]="isProcessing">
+                  <span class="material-icons">{{ isProcessing ? 'sync' : 'check' }}</span> 
+                  {{ isProcessing ? 'Processing...' : 'Approve' }}
                 </button>
-                <button class="btn-reject" (click)="resume('reject')">
+                <button class="btn-reject" (click)="resume(node.id, 'reject')" [disabled]="isProcessing">
                   <span class="material-icons">close</span> Reject
                 </button>
               </div>
@@ -295,39 +297,47 @@ import { WorkflowStateService } from '../services/workflow-state.service';
 export class ExecutionLogsComponent {
   runtime = inject(WorkflowRuntimeService);
   state = inject(WorkflowStateService);
-  
-  context = computed(() => this.runtime.activeExecutionContext());
+
+  context = this.runtime.activeExecutionContext;
+  isProcessing = false;
+
+  calculateProgress(): number {
+    const ctx = this.context();
+    if (!ctx) return 0;
+    const total = this.state.nodes().length;
+    const completed = ctx.history.length;
+    return Math.min(Math.round((completed / total) * 100), 99);
+  }
 
   getNodeLabel(nodeId: string): string {
     const node = this.state.nodes().find(n => n.id === nodeId);
     return node?.label || nodeId;
   }
 
-  calculateProgress(): number {
-    const ctx = this.context();
-    if (!ctx) return 0;
-    
-    const totalNodes = this.state.nodes().length;
-    if (totalNodes === 0) return 0;
-    
-    const completedNodes = ctx.history.length;
-    return Math.min(Math.round((completedNodes / totalNodes) * 100), 100);
-  }
-
-  hasWaitingNode() {
+  hasWaitingNode(): boolean {
     return this.state.nodes().some(n => n.status === 'waiting');
   }
 
-  resume(action: 'approve' | 'reject') {
-    // Find the waiting node
-    const waitingNode = this.state.nodes().find(n => n.status === 'waiting');
-    if (waitingNode) {
-      this.runtime.resumeWorkflow(waitingNode.id, action);
+  waitingNodes() {
+    return this.state.nodes().filter(n => n.status === 'waiting');
+  }
+
+  trackByLogId(index: number, item: any) {
+    return item.id || index;
+  }
+
+  async resume(nodeId: string, action: 'approve' | 'reject') {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    try {
+      await this.runtime.resumeWorkflow(nodeId, action);
+    } finally {
+      // Keep loading state for a moment to allow polling to catch up
+      setTimeout(() => this.isProcessing = false, 2000);
     }
   }
 
   closeLogs() {
-    this.runtime.activeExecutionContext.set(null);
-    this.state.resetExecutionStates();
+    this.runtime.clearExecution();
   }
 }

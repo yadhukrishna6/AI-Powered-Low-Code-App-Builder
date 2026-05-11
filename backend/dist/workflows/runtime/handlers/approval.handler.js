@@ -11,6 +11,21 @@ const common_1 = require("@nestjs/common");
 let ApprovalHandler = class ApprovalHandler {
     async execute(node, context) {
         const { approverRole, timeout } = node.data || {};
+        const resumeAction = context.variables?.resumeAction;
+        if (resumeAction === 'approve') {
+            return {
+                status: 'success',
+                nextPath: 'approved',
+                output: { approvalStatus: 'approved', approvedBy: 'manual-ui' }
+            };
+        }
+        if (resumeAction === 'reject') {
+            return {
+                status: 'success',
+                nextPath: 'rejected',
+                output: { approvalStatus: 'rejected', rejectedBy: 'manual-ui' }
+            };
+        }
         return {
             status: 'waiting',
             output: {
