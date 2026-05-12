@@ -5,6 +5,7 @@ import { FormBuilderService } from '../../core/services/form-builder.service';
 import { WorkflowRuntimeService } from '../workflow/execution/workflow-runtime.service';
 import { WorkflowStateService } from '../workflow/services/workflow-state.service';
 import { RuleEngineService } from '../../core/services/rule-engine.service';
+import { ProjectService } from '../../core/services/project.service';
 import { DynamicRendererComponent } from '../builder/components/canvas/dynamic-renderer.component';
 import { FormsModule } from '@angular/forms';
 import { ModalService } from '../../core/services/modal.service';
@@ -20,11 +21,11 @@ import { ModalService } from '../../core/services/modal.service';
         <div class="header-content">
           <div class="app-info">
             <span class="material-icons app-icon">apps</span>
-            <h1>Employee Leave Management</h1>
+            <h1>{{ projectName() }}</h1>
           </div>
           <div class="user-profile">
-            <div class="avatar">JD</div>
-            <span class="user-name">John Doe</span>
+            <div class="avatar">Y</div>
+            <span class="user-name">Yadhukrishna</span>
           </div>
         </div>
       </header>
@@ -33,8 +34,8 @@ import { ModalService } from '../../core/services/modal.service';
         <div class="form-container fade-in">
           <div class="form-card">
             <div class="form-header">
-              <h2>Leave Request Form</h2>
-              <p>Please fill in the details below to submit your leave request.</p>
+              <h2>{{ formName() || 'Application Form' }}</h2>
+              <p>{{ formDescription() || 'Please fill in the details below to submit your request.' }}</p>
             </div>
 
             <div class="form-content">
@@ -212,16 +213,38 @@ export class RuntimeAppComponent implements OnInit {
   formService = inject(FormBuilderService);
   workflowRuntime = inject(WorkflowRuntimeService);
   workflowState = inject(WorkflowStateService);
+  projectService = inject(ProjectService);
   ruleEngine = inject(RuleEngineService);
   modal = inject(ModalService);
   route = inject(ActivatedRoute);
 
+  projectName = signal('Loading Project...');
+  formName = signal('');
+  formDescription = signal('');
   isSubmitting = signal(false);
   formData: any = {};
 
-  ngOnInit() {
-    // In a real app, load the project by ID
-    // For the demo, we'll assume the form is already loaded in the service
+  async ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      try {
+        const project = await this.projectService.getProject(id);
+        this.projectName.set(project.name);
+        
+        // Load the first form
+        if (project.forms && project.forms.length > 0) {
+          const form = project.forms[0];
+          this.formName.set(form.name);
+          this.formService.loadFormSchema(form.schema);
+        }
+
+        // Load the workflow
+        await this.workflowState.loadWorkflowByProject(id);
+      } catch (e) {
+        console.error('Failed to load project for runtime:', e);
+        this.projectName.set('Project Not Found');
+      }
+    }
   }
 
   onFieldChange(event: { fieldId: string, value: any }) {

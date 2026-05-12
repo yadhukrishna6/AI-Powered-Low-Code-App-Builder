@@ -6,6 +6,7 @@ import { PaletteComponent } from './components/palette/palette.component';
 import { CanvasComponent } from './components/canvas/canvas.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { AIAssistantComponent } from './components/ai-assistant/ai-assistant.component';
+import { RuntimePreviewModalComponent } from './components/runtime-preview/runtime-preview-modal.component';
 import { ProjectService } from '../../core/services/project.service';
 import { FormBuilderService } from '../../core/services/form-builder.service';
 
@@ -19,13 +20,15 @@ import { FormBuilderService } from '../../core/services/form-builder.service';
     PaletteComponent,
     CanvasComponent,
     PropertiesPanelComponent,
-    AIAssistantComponent
+    AIAssistantComponent,
+    RuntimePreviewModalComponent
   ],
   template: `
     <div class="designer-workspace">
       <app-top-nav 
         [projectName]="projectService.activeProject()?.name ?? 'Untitled App'"
-        (onAiClick)="showAiModal.set(true)">
+        (onAiClick)="showAiModal.set(true)"
+        (onPreviewClick)="showPreview.set(true)">
       </app-top-nav>
       
       <main class="builder-content">
@@ -45,6 +48,12 @@ import { FormBuilderService } from '../../core/services/form-builder.service';
         *ngIf="showAiModal()" 
         (close)="showAiModal.set(false)">
       </app-ai-assistant>
+
+      <!-- Live Preview Modal -->
+      <app-runtime-preview-modal
+        *ngIf="showPreview()"
+        (close)="showPreview.set(false)">
+      </app-runtime-preview-modal>
     </div>
   `,
   styles: [`
@@ -56,7 +65,8 @@ import { FormBuilderService } from '../../core/services/form-builder.service';
     .designer-workspace {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      height: 100vh;
+      overflow: hidden;
       min-width: 0;
     }
     .builder-content {
@@ -87,6 +97,7 @@ export class BuilderContainerComponent implements OnInit {
   projectService = inject(ProjectService);
   formService = inject(FormBuilderService);
   showAiModal = signal(false);
+  showPreview = signal(false);
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');

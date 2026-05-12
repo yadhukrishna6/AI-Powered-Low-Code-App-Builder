@@ -102,7 +102,7 @@ import { ModalService } from '../../../../core/services/modal.service';
           <span class="material-icons" *ngIf="!service.isSaving()">save</span>
           {{ service.isSaving() ? 'Saving...' : 'Save App' }}
         </button>
-        <button class="btn-play" (click)="testSimulation()" title="Live Preview">
+        <button class="btn-play" (click)="onPreviewClick.emit()" title="Live Preview">
           <span class="material-icons">play_arrow</span>
         </button>
       </div>
@@ -238,6 +238,7 @@ export class TopNavComponent {
   
   @Input() projectName = 'Untitled App';
   @Output() onAiClick = new EventEmitter<void>();
+  @Output() onPreviewClick = new EventEmitter<void>();
 
   private http = inject(HttpClient);
 
@@ -319,10 +320,6 @@ export class TopNavComponent {
   }
 
   testSimulation() {
-    // Open the runtime preview for this project
-    const project = this.projectService.activeProject();
-    if (project) {
-      window.open(`/runtime/app/${project.id}`, '_blank');
-    }
+    this.onPreviewClick.emit();
   }
 }

@@ -90,7 +90,8 @@ import { ModalService } from '../../../core/services/modal.service';
     .workflow-container {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      height: 100vh;
+      overflow: hidden;
       background: var(--bg-primary);
       color: var(--text-primary);
     }
