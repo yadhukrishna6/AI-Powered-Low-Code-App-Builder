@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FormField, FieldType } from '../../../../core/models/form.model';
@@ -10,10 +10,12 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
   standalone: true,
   imports: [CommonModule, DragDropModule, FormsModule],
   host: {
-    '[style.grid-column]': "'span ' + (field.layout?.span || 12)"
+    '[style.grid-column]': "'span ' + (field.layout?.span || 12)",
+    '[hidden]': "!isVisible()"
   },
   template: `
     <div 
+      *ngIf="isVisible()"
       [id]="field.id"
       class="field-card"
       [class.selected]="service.selectedField()?.id === field.id"
@@ -21,6 +23,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       cdkDrag
       [cdkDragData]="field"
     >
+      <!-- ... existing content ... -->
       <!-- Drag Preview -->
       <div *cdkDragPreview class="drag-preview">
         <span>{{ field.label }}</span>
@@ -331,9 +334,27 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
 export class DynamicRendererComponent {
   @Input() field!: FormField;
   @Input() isRuntime = false;
+  @Input() formValues: Record<string, any> = {};
   @Output() fieldChange = new EventEmitter<{ fieldId: string, value: any }>();
 
   service = inject(FormBuilderService);
+
+  isVisible = computed(() => {
+    const rules = this.field.visibilityRules;
+    if (!rules || rules.length === 0) return true;
+    
+    return rules.every(rule => {
+      const value = this.formValues[rule.fieldId];
+      switch (rule.operator) {
+        case '==': return value == rule.value;
+        case '!=': return value != rule.value;
+        case 'contains': return String(value || '').includes(String(rule.value || ''));
+        case 'empty': return !value || (Array.isArray(value) && value.length === 0);
+        case 'not_empty': return !!value && (!Array.isArray(value) || value.length > 0);
+        default: return true;
+      }
+    });
+  });
 
   onValueChange(value: any) {
     this.fieldChange.emit({ fieldId: this.field.id, value });

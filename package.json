@@ -22,6 +22,7 @@
     "@types/uuid": "^10.0.0",
     "jsplumb": "^2.15.6",
     "rxjs": "^7.8.0",
+    "socket.io-client": "^4.8.3",
     "tslib": "^2.6.0",
     "uuid": "^14.0.0",
     "zone.js": "^0.15.1"

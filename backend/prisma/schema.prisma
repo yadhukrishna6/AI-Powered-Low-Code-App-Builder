@@ -50,20 +50,40 @@ model Workflow {
   project     Project?    @relation(fields: [projectId], references: [id])
   name        String
   description String?
-  graph       Json        // { nodes: Node[], edges: Edge[] }
+  draftGraph  Json?       // The current working draft
   status      String      @default("draft") // draft, active, archived
-  version     Int         @default(1)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  
+  versions    WorkflowVersion[]
+  activeVersionId String?
   executions  WorkflowExecution[]
 
   @@map("workflows")
+}
+
+model WorkflowVersion {
+  id          String    @id @default(uuid())
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id])
+  version     Int
+  graph       Json      // { nodes: Node[], edges: Edge[] }
+  metadata    Json?     // Version specific notes, author, etc.
+  createdAt   DateTime  @default(now())
+  
+  executions  WorkflowExecution[]
+  scheduledJobs ScheduledJob[]
+  
+  @@unique([workflowId, version])
+  @@map("workflow_versions")
 }
 
 model WorkflowExecution {
   id            String    @id @default(uuid())
   workflowId    String
   workflow      Workflow  @relation(fields: [workflowId], references: [id])
+  versionId     String?
+  version       WorkflowVersion? @relation(fields: [versionId], references: [id])
   status        String    @default("queued") // queued, running, waiting, success, failed, cancelled
   triggerSource String?   // webhook, form, schedule, manual
   context       Json      // Variables and data passed through the flow
@@ -75,6 +95,8 @@ model WorkflowExecution {
   // New execution state tracking
   nodeStates    ExecutionNodeState[]
   edgeStates    ExecutionEdgeState[]
+  approvalTasks ApprovalTask[]
+  snapshots     ReplaySnapshot[]
 
   @@map("workflow_executions")
 }
@@ -127,6 +149,52 @@ model ExecutionEdgeState {
   @@map("execution_edge_states")
 }
 
+model ApprovalTask {
+  id            String    @id @default(uuid())
+  executionId   String
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id])
+  nodeId        String
+  approverRole  String?
+  approverId    String?
+  status        String    @default("pending") // pending, approved, rejected, expired
+  timeoutAt     DateTime?
+  remindedAt    DateTime?
+  actionedAt    DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("approval_tasks")
+}
+
+model ScheduledJob {
+  id            String    @id @default(uuid())
+  workflowId    String
+  versionId     String
+  version       WorkflowVersion @relation(fields: [versionId], references: [id])
+  cron          String?
+  runAt         DateTime?
+  payload       Json?
+  status        String    @default("active") // active, completed, failed, cancelled
+  lastRunAt     DateTime?
+  nextRunAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("scheduled_jobs")
+}
+
+model ReplaySnapshot {
+  id            String    @id @default(uuid())
+  executionId   String
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id])
+  nodeId        String
+  context       Json      // Full variables state at this point
+  timestamp     DateTime  @default(now())
+
+  @@map("replay_snapshots")
+}
+
 model BusinessRule {
   id            String   @id @default(uuid())
   targetField   String
@@ -138,3 +206,4 @@ model BusinessRule {
 
   @@map("business_rules")
 }
+

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
@@ -37,11 +37,28 @@ import { DynamicRendererComponent } from './dynamic-renderer.component';
           </div>
         }
 
+        <div *ngIf="service.formSteps().length > 0" class="step-indicator">
+          <div *ngFor="let step of service.formSteps(); let i = index" 
+               class="step-dot" 
+               [class.active]="i === service.currentStepIndex()"
+               [title]="step.title">
+          </div>
+          <span class="step-label">Step {{ service.currentStepIndex() + 1 }}: {{ service.formSteps()[service.currentStepIndex()].title }}</span>
+        </div>
+
         <div class="canvas-grid">
           <app-dynamic-renderer 
-            *ngFor="let field of service.schema().fields" 
-            [field]="field">
+            *ngFor="let field of currentFields()" 
+            [field]="field"
+            [isRuntime]="true"
+            [formValues]="service.formValues()"
+            (fieldChange)="onFieldChange($event)">
           </app-dynamic-renderer>
+        </div>
+
+        <div *ngIf="service.formSteps().length > 0" class="step-actions">
+           <button (click)="service.prevStep()" [disabled]="service.currentStepIndex() === 0" class="step-btn">Back</button>
+           <button (click)="service.nextStep()" [disabled]="service.currentStepIndex() === service.formSteps().length - 1" class="step-btn primary">Next</button>
         </div>
       </div>
 
@@ -186,10 +203,35 @@ import { DynamicRendererComponent } from './dynamic-renderer.component';
       color: var(--text-primary);
       line-height: 1.6;
     }
+
+    /* ─── Multi-step ─── */
+    .step-indicator { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+    .step-dot.active { background: var(--accent); transform: scale(1.2); box-shadow: 0 0 8px var(--accent); }
+    .step-label { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    
+    .step-actions { display: flex; justify-content: space-between; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .step-btn { padding: 10px 24px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .step-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .step-btn.primary { background: var(--accent); color: white; border: none; }
+    .step-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
 export class CanvasComponent {
   service = inject(FormBuilderService);
+
+  currentFields = computed(() => {
+    const steps = this.service.formSteps();
+    const fields = this.service.formFields();
+    if (steps.length === 0) return fields;
+    
+    const currentStepId = steps[this.service.currentStepIndex()].id;
+    return fields.filter(f => f.stepId === currentStepId);
+  });
+
+  onFieldChange(event: { fieldId: string, value: any }) {
+    this.service.updateValue(event.fieldId, event.value);
+  }
 
   onDrop(event: CdkDragDrop<any>) {
     if (event.previousContainer === event.container) {

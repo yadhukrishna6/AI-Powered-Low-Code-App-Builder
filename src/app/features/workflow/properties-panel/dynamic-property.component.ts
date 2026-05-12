@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NodeProperty } from '../registry/node-registry';
 import { ProjectService } from '../../../core/services/project.service';
+import { WorkflowStateService } from '../services/workflow-state.service';
 
 @Component({
   selector: 'app-dynamic-property',
@@ -50,11 +51,13 @@ import { ProjectService } from '../../../core/services/project.service';
           <option *ngFor="let opt of property.options" [value]="opt">{{ opt | titlecase }}</option>
         </select>
 
-        <!-- Variable Picker (Mocked for now) -->
-        <div *ngSwitchCase="'variable-picker'" class="variable-picker">
-          <input type="text" [(ngModel)]="data[property.key]" (ngModelChange)="onChanged()" placeholder="{{ '{{variable}}' }}">
-          <button class="picker-btn"><span class="material-icons">add_box</span></button>
-        </div>
+        <!-- Variable Picker -->
+        <select *ngSwitchCase="'variable-picker'" 
+                [(ngModel)]="data[property.key]" 
+                (ngModelChange)="onChanged()">
+          <option value="">-- Select Variable --</option>
+          <option *ngFor="let v of availableVariables()" [value]="v.value">{{ v.label }}</option>
+        </select>
 
         <!-- Cron Helper -->
         <div *ngSwitchCase="'cron'" class="cron-field">
@@ -75,7 +78,10 @@ import { ProjectService } from '../../../core/services/project.service';
         <div *ngSwitchCase="'multi-condition'" class="multi-condition">
           <div *ngFor="let cond of data[property.key]; let i = index" class="condition-row">
             <div class="cond-fields">
-              <input type="text" [(ngModel)]="cond.field" (ngModelChange)="onChanged()" placeholder="{{ '{{variable}}' }}" class="cond-input">
+              <select [(ngModel)]="cond.field" (ngModelChange)="onChanged()" class="cond-input">
+                <option value="">-- Variable --</option>
+                <option *ngFor="let v of availableVariables()" [value]="v.value">{{ v.label }}</option>
+              </select>
               <select [(ngModel)]="cond.operator" (ngModelChange)="onChanged()" class="cond-select">
                 <option value="==">==</option>
                 <option value="!=">!=</option>
@@ -125,10 +131,44 @@ import { ProjectService } from '../../../core/services/project.service';
     .add-btn .material-icons { font-size: 1.1rem; }
 
     .multi-condition { display: flex; flex-direction: column; gap: 12px; }
-    .condition-row { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
-    .cond-fields { display: flex; flex: 1; gap: 4px; }
-    .cond-input { flex: 1; min-width: 0; padding: 6px 8px !important; font-size: 0.75rem !important; }
-    .cond-select { width: 60px !important; padding: 6px 4px !important; font-size: 0.75rem !important; text-align: center; }
+    .condition-row { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      background: rgba(255, 255, 255, 0.02); 
+      padding: 12px; 
+      border-radius: 12px; 
+      border: 1px solid var(--border); 
+    }
+    .cond-fields { 
+      display: grid; 
+      grid-template-columns: 1.5fr 1fr 1.5fr; 
+      flex: 1; 
+      gap: 8px; 
+    }
+    .cond-input, .cond-select { 
+      width: 100% !important; 
+      padding: 8px 12px !important; 
+      font-size: 0.75rem !important; 
+      border-radius: 8px !important;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .cond-select {
+      text-align: left;
+      cursor: pointer;
+    }
+    .remove-btn { 
+      color: #ef4444; 
+      padding: 8px; 
+      border-radius: 8px; 
+      background: rgba(239, 68, 68, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .remove-btn:hover { background: rgba(239, 68, 68, 0.15); }
   `]
 })
 export class DynamicPropertyComponent {
@@ -137,7 +177,10 @@ export class DynamicPropertyComponent {
   @Output() change = new EventEmitter<any>();
 
   projectService = inject(ProjectService);
+  workflowState = inject(WorkflowStateService);
+  
   projectForms = computed(() => (this.projectService.activeProject() as any)?.forms || []);
+  availableVariables = this.workflowState.availableVariables;
 
   onChanged() {
     this.change.emit(this.data);

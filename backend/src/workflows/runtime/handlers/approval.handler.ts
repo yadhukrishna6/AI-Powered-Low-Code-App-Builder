@@ -1,39 +1,51 @@
 import { Injectable } from '@nestjs/common';
 import { NodeHandler, NodeResult, ExecutionContext } from '../node-handler.interface';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()
 export class ApprovalHandler implements NodeHandler {
+  constructor(private prisma: PrismaService) {}
+
   async execute(node: any, context: ExecutionContext): Promise<NodeResult> {
-    const { approverRole, timeout } = node.data || {};
+    // Check if we are resuming from a previous wait
+    const lastLog = await this.prisma.workflowLog.findFirst({
+      where: { 
+        executionId: context.executionId,
+        nodeId: node.id,
+        status: 'waiting'
+      },
+      orderBy: { timestamp: 'desc' }
+    });
 
-    // Check if we are resuming from a user action
-    const resumeAction = context.variables?.resumeAction;
-
-    if (resumeAction === 'approve') {
+    // If there's an action in the context (passed during resume), use it
+    if (context.variables.__resume_action) {
+      const action = context.variables.__resume_action;
+      
+      // Clear the resume action from context to avoid loops
+      delete context.variables.__resume_action;
+      
       return {
         status: 'success',
-        nextPath: 'approved',
-        output: { approvalStatus: 'approved', approvedBy: 'manual-ui' }
+        nextPath: action === 'approve' ? 'approved' : 'rejected',
+        output: {
+          lastApprovalStatus: action,
+          approvedBy: context.variables.__resume_user || 'system'
+        }
       };
     }
 
-    if (resumeAction === 'reject') {
-      return {
-        status: 'success',
-        nextPath: 'rejected',
-        output: { approvalStatus: 'rejected', rejectedBy: 'manual-ui' }
-      };
-    }
-
-    // Default: Pause and wait for user input
-    return {
-      status: 'waiting',
-      output: {
-        approvalRequested: true,
-        approverRole,
-        timeout: timeout || 24, // hours
-        message: `Approval requested from ${approverRole} role`
+    // Otherwise, create an approval task and wait
+    await this.prisma.approvalTask.create({
+      data: {
+        executionId: context.executionId,
+        nodeId: node.id,
+        approverRole: node.data.approverRole || 'admin',
+        status: 'pending'
       }
+    });
+
+    return {
+      status: 'waiting'
     };
   }
 }

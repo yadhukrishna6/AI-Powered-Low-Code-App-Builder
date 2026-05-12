@@ -1,9 +1,13 @@
 import { Controller, Get, Post, Body, Put, Param, Delete, Query } from '@nestjs/common';
 import { WorkflowsService } from './workflows.service';
+import { AIWorkflowService } from './ai-workflow.service';
 
 @Controller('workflows')
 export class WorkflowsController {
-  constructor(private readonly workflowsService: WorkflowsService) {}
+  constructor(
+    private readonly workflowsService: WorkflowsService,
+    private readonly aiWorkflowService: AIWorkflowService,
+  ) {}
 
   @Post()
   create(@Body() data: any) {
@@ -30,6 +34,11 @@ export class WorkflowsController {
     return this.workflowsService.remove(id);
   }
 
+  @Post(':id/publish')
+  publish(@Param('id') id: string, @Body() metadata: any) {
+    return this.workflowsService.publish(id, metadata);
+  }
+
   @Post(':id/execute')
   execute(@Param('id') id: string, @Body() context: any) {
     return this.workflowsService.createExecution(id, 'manual', context);
@@ -43,5 +52,10 @@ export class WorkflowsController {
   @Post('executions/:id/resume')
   resumeExecution(@Param('id') id: string, @Body() body: { action: 'approve' | 'reject' }) {
     return this.workflowsService.resumeExecution(id, body.action);
+  }
+
+  @Post('ai/generate')
+  async generateAI(@Body() body: { prompt: string }) {
+    return this.aiWorkflowService.generateWorkflow(body.prompt);
   }
 }

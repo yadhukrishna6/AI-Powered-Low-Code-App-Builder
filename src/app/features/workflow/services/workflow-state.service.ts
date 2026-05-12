@@ -44,6 +44,21 @@ export class WorkflowStateService {
   );
   zoomLevel = computed(() => this._workflow().zoom);
   panPosition = computed(() => this._workflow().pan);
+  
+  availableVariables = computed(() => {
+    const vars: any[] = [];
+    this._workflow().nodes.forEach(node => {
+      // Node-based outputs
+      if (node.subType === 'api-request') {
+        vars.push({ label: `${node.label} Response`, value: `${node.id}.response` });
+      } else if (node.subType === 'transform') {
+        vars.push({ label: `${node.label} Result`, value: `${node.id}.result` });
+      } else {
+        vars.push({ label: `${node.label} Output`, value: node.id });
+      }
+    });
+    return vars;
+  });
 
   // Persistence Actions
   async createWorkflow(projectId: string, name: string = 'Main Workflow') {
@@ -75,18 +90,17 @@ export class WorkflowStateService {
         return this.createWorkflow(current.projectId || '', current.name);
       }
 
-      // Update existing workflow
+      // Update existing workflow (Draft)
       const payload = {
         name: current.name,
-        graph: { ...current, id: this._dbId } // Ensure graph ID matches DB ID
+        graph: { ...current, id: this._dbId }
       };
 
       const response = await firstValueFrom(this.http.put<any>(`${this.apiUrl}/${this._dbId}`, payload));
-      if (response && response.graph) {
-        response.graph.id = this._dbId;
-        this.loadWorkflow(response.graph, response.projectId);
+      if (response && response.draftGraph) {
+        this.loadWorkflow(response.draftGraph, response.projectId);
       }
-      console.log('Workflow saved to DB');
+      console.log('Workflow draft saved');
     } catch (e: any) {
       if (e.status === 404) {
         this._dbId = null;
@@ -96,20 +110,54 @@ export class WorkflowStateService {
     }
   }
 
+  async publishWorkflow(metadata: any = {}) {
+    if (!this._dbId) return null;
+    try {
+      const response = await firstValueFrom(this.http.post<any>(`${this.apiUrl}/${this._dbId}/publish`, metadata));
+      console.log('Workflow published as version', response.version);
+      return response;
+    } catch (e) {
+      console.error('Failed to publish workflow:', e);
+      return null;
+    }
+  }
+
   async loadWorkflowFromApi(id: string) {
     try {
       const data = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/${id}`));
-      if (data && data.graph) {
-        // Always override graph.id with the canonical DB record ID
+      if (data) {
         this._dbId = data.id;
-        data.graph.id = data.id;
-        this.loadWorkflow(data.graph, data.projectId);
+        // Prefer draftGraph for editing, fallback to versioned graph if needed
+        const graph = data.draftGraph || (data.versions?.[0]?.graph) || { nodes: [], edges: [] };
+        graph.id = data.id;
+        this.loadWorkflow(graph, data.projectId);
         return true;
       }
       return false;
     } catch (e) {
       console.error('Failed to load workflow:', e);
       return false;
+    }
+  }
+
+  async loadExecutionHistory(executionId: string) {
+    try {
+      const data = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/executions/${executionId}`));
+      if (data && data.version?.graph) {
+        this.loadWorkflow(data.version.graph);
+        // Map logs to node statuses
+        data.logs.forEach((log: any) => {
+          this.updateNodeStatus(log.nodeId, log.status as ExecutionStatus, log.error);
+          
+          // Highlight paths
+          const edges = this._workflow().edges.filter(e => e.source === log.nodeId);
+          // In a real replay we would check which edge was actually taken from log metadata
+        });
+      }
+      return data;
+    } catch (e) {
+      console.error('Failed to load execution history:', e);
+      return null;
     }
   }
 

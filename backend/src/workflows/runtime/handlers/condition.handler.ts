@@ -4,49 +4,38 @@ import { NodeHandler, NodeResult, ExecutionContext } from '../node-handler.inter
 @Injectable()
 export class ConditionHandler implements NodeHandler {
   async execute(node: any, context: ExecutionContext): Promise<NodeResult> {
-    const { conditions, matchType, field, operator, value } = node.data || {};
+    const { conditions, matchType } = node.data;
     
-    // Convert single condition to array for uniform processing if needed
-    const rules = conditions || (field ? [{ field, operator, value }] : []);
-
-    if (rules.length === 0) {
-      throw new Error('No conditions defined for evaluation');
+    if (!conditions || !Array.isArray(conditions) || conditions.length === 0) {
+      return { status: 'success', nextPath: 'true' };
     }
 
-    const results = rules.map((rule: any) => {
-      const { field: f, operator: op, value: v } = rule;
+    const results = conditions.map(cond => {
+      const actualValue = this.resolveValue(cond.field, context.variables);
+      const expectedValue = cond.value;
       
-      // Parse template if field is wrapped in {{ }}
-      let fieldKey = f;
-      if (f && f.startsWith('{{') && f.endsWith('}}')) {
-        fieldKey = f.slice(2, -2).trim();
-      }
-      
-      const actualValue = context.variables[fieldKey];
-      if (actualValue === undefined) return false;
-
-      switch (op) {
-        case '==': return actualValue == v;
-        case '!=': return actualValue != v;
-        case '>': return Number(actualValue) > Number(v);
-        case '<': return Number(actualValue) < Number(v);
-        case 'contains': return String(actualValue).includes(String(v));
+      switch (cond.operator) {
+        case '==': return actualValue == expectedValue;
+        case '!=': return actualValue != expectedValue;
+        case '>': return Number(actualValue) > Number(expectedValue);
+        case '<': return Number(actualValue) < Number(expectedValue);
+        case 'contains': return String(actualValue).includes(String(expectedValue));
         default: return false;
       }
     });
 
-    let isTrue = false;
-    if (matchType === 'OR') {
-      isTrue = results.some(r => r === true);
-    } else {
-      // Default is AND
-      isTrue = results.every(r => r === true);
-    }
+    const isMatch = matchType === 'OR' 
+      ? results.some(r => r) 
+      : results.every(r => r);
 
     return {
       status: 'success',
-      nextPath: isTrue ? 'true' : 'false',
-      output: { conditionResult: isTrue }
+      nextPath: isMatch ? 'true' : 'false'
     };
+  }
+
+  private resolveValue(path: string, variables: any): any {
+    if (!path) return undefined;
+    return path.split('.').reduce((obj, key) => obj?.[key], variables);
   }
 }

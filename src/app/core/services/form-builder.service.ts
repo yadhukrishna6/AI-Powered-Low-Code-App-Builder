@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { FormField, FormSchema } from '../models/form.model';
+import { FormField, FormSchema, FormStep } from '../models/form.model';
 import { ModalService } from './modal.service';
 
 @Injectable({
@@ -14,18 +14,38 @@ export class FormBuilderService {
 
   // Current form state
   formFields = signal<FormField[]>([]);
+  formValues = signal<Record<string, any>>({});
+  formSteps = signal<FormStep[]>([]);
+  currentStepIndex = signal<number>(0);
   layout = signal<any>({ columns: 12, gap: 20 });
   selectedFieldId = signal<string | null>(null);
   canvasMode = signal<'desktop' | 'tablet' | 'mobile'>('desktop');
   isSaving = signal(false);
   currentProjectId = signal<string | null>(null);
 
+  updateValue(fieldId: string, value: any) {
+    this.formValues.update(values => ({ ...values, [fieldId]: value }));
+  }
+
   selectedField = computed(() => 
     this.formFields().find(f => f.id === this.selectedFieldId()) || null
   );
 
+  nextStep() {
+    if (this.currentStepIndex() < this.formSteps().length - 1) {
+      this.currentStepIndex.update(i => i + 1);
+    }
+  }
+
+  prevStep() {
+    if (this.currentStepIndex() > 0) {
+      this.currentStepIndex.update(i => i - 1);
+    }
+  }
+
   schema = computed(() => ({
     fields: this.formFields(),
+    steps: this.formSteps(),
     layout: this.layout()
   }));
 

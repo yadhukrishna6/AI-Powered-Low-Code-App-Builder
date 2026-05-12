@@ -23,10 +23,23 @@ export interface FormField {
   layout?: {
     span?: number;
   };
+  stepId?: string;
+  visibilityRules?: {
+    fieldId: string;
+    operator: '==' | '!=' | 'contains' | 'empty' | 'not_empty';
+    value: any;
+  }[];
+}
+
+export interface FormStep {
+  id: string;
+  title: string;
+  description?: string;
 }
 
 export interface FormSchema {
   fields: FormField[];
+  steps?: FormStep[];
   layout?: any;
 }
 
