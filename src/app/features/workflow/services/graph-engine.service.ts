@@ -134,13 +134,24 @@ export class GraphEngineService {
     }
   }
 
-  removeEdgeById(edgeId: string) {
+  removeEdge(edgeId: string) {
     if (!this.instance) return;
     const connections = this.instance.getAllConnections() as any[];
     const conn = connections.find(c => c.getParameter('id') === edgeId);
     if (conn) {
       this.instance.deleteConnection(conn);
     }
+  }
+
+  destroy() {
+    if (this.instance) {
+      this.instance.reset();
+      this.instance = undefined;
+    }
+  }
+
+  connectNodes(sourceId: string, targetId: string, data?: any) {
+    return this.connect(sourceId, targetId, data);
   }
 
   connect(sourceId: string, targetId: string, data?: any) {
@@ -231,18 +242,25 @@ export class GraphEngineService {
     const color = this.edgeStateColors[state] || '#94a3b8';
     const width = this.edgeStateWidths[state] || 2;
 
-    conn.setPaintStyle({ stroke: color, strokeWidth: width });
-    conn.setHoverPaintStyle({ stroke: color, strokeWidth: width + 1.5, opacity: 0.8 });
+    const style: any = { stroke: color, strokeWidth: width };
 
-    // Update arrow overlay color
-    const arrow = conn.getOverlay('arrow') || conn.getOverlays()?.[0];
-    if (arrow) {
-      try { arrow.setVisible(true); } catch (_) {}
+    if (state === 'active') {
+      style.dashstyle = '4 2';
+    } else if (state === 'skipped-path') {
+      style.dashstyle = '4 3';
     }
 
-    // Add dash for skipped/inactive
-    if (state === 'skipped-path') {
-      conn.setPaintStyle({ stroke: color, strokeWidth: width, dashstyle: '4 3' });
+    conn.setPaintStyle(style);
+    conn.setHoverPaintStyle({ stroke: color, strokeWidth: width + 1.5, opacity: 0.8 });
+
+    // Handle SVG animation class (for custom pulse)
+    const connector = conn.getConnector().canvas;
+    if (connector) {
+      if (state === 'active') {
+        connector.classList.add('edge-active');
+      } else {
+        connector.classList.remove('edge-active');
+      }
     }
   }
 
@@ -252,6 +270,8 @@ export class GraphEngineService {
     connections.forEach(conn => {
       conn.setPaintStyle({ stroke: '#94a3b8', strokeWidth: 2 });
       conn.setHoverPaintStyle({ stroke: '#3b82f6', strokeWidth: 3 });
+      const connector = conn.getConnector().canvas;
+      if (connector) connector.classList.remove('edge-active');
     });
   }
 }

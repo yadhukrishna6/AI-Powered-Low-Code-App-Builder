@@ -6,6 +6,7 @@ import { WorkflowRuntimeService } from './workflow-runtime.service';
 import { WorkflowOrchestrator } from './workflow-orchestrator.service';
 import { WorkflowGateway } from './workflow.gateway';
 import { ExecutionContext } from './node-handler.interface';
+import { ExpressionResolverService } from './expression-resolver.service';
 
 @Processor('workflow-queue')
 export class WorkflowWorker extends WorkerHost {
@@ -16,6 +17,7 @@ export class WorkflowWorker extends WorkerHost {
     private runtime: WorkflowRuntimeService,
     private orchestrator: WorkflowOrchestrator,
     private gateway: WorkflowGateway,
+    private expressionResolver: ExpressionResolverService,
   ) {
     super();
   }
@@ -51,20 +53,26 @@ export class WorkflowWorker extends WorkerHost {
     // Emit live update: node running
     this.gateway.sendNodeExecutionUpdate(executionId, nodeId, 'running');
 
+    // Prepare Context (n8n style: track node outputs)
     const context: ExecutionContext = {
       executionId,
-      workflowId: execution.workflowId,
+      workflowId: (execution as any).workflowId,
       variables: execution.context as Record<string, any>,
+      lastOutput: (execution as any).lastOutput || {},
+      nodeOutputs: (execution as any).nodeOutputs || {},
     };
 
+    // 3. Resolve Expressions in Node Data (n8n style)
+    const resolvedData = this.expressionResolver.resolve(node.data, context);
+
     try {
-      // Execute handler
+      // Execute handler with resolved data
       const handler = this.runtime.getHandler(node.subType);
       if (!handler) {
         throw new Error(`No handler found for ${node.subType}`);
       }
 
-      const result = await handler.execute(node, context);
+      const result = await handler.execute({ ...node, data: resolvedData }, context);
 
       // Emit live update: node status
       this.gateway.sendNodeExecutionUpdate(executionId, nodeId, result.status, result.output);
@@ -138,7 +146,7 @@ export class WorkflowWorker extends WorkerHost {
 
       // Find next nodes
       const edges = graph.edges.filter((e: any) => e.source === nodeId);
-      let nextEdges = [];
+      let nextEdges: any[] = [];
 
       if (result.nextPath) {
         nextEdges = edges.filter(

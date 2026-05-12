@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRuntimeService } from './runtime/workflow-runtime.service';
+import { WorkflowOrchestrator } from './runtime/workflow-orchestrator.service';
+import { ExpressionResolverService } from './runtime/expression-resolver.service';
+import { ExecutionContext } from './runtime/node-handler.interface';
 
 @Injectable()
 export class WorkflowsService {
@@ -8,7 +11,30 @@ export class WorkflowsService {
     private prisma: PrismaService,
     private runtime: WorkflowRuntimeService,
     private orchestrator: WorkflowOrchestrator,
+    private expressionResolver: ExpressionResolverService,
   ) {}
+
+  async testNode(node: any, context: any) {
+    const handler = this.runtime.getHandler(node.subType);
+    if (!handler) {
+      throw new BadRequestException(`No handler found for node type: ${node.subType}`);
+    }
+
+    // Prepare full context for resolution
+    const fullContext: ExecutionContext = {
+      executionId: 'test-execution',
+      workflowId: 'test-workflow',
+      variables: context.variables || {},
+      lastOutput: context.lastOutput || {},
+      nodeOutputs: context.nodeOutputs || {},
+    };
+
+    // Resolve expressions in node configuration
+    const resolvedData = this.expressionResolver.resolve(node.data, fullContext);
+    
+    // Execute
+    return await handler.execute({ ...node, data: resolvedData }, fullContext);
+  }
 
   async create(data: any) {
     if (data.projectId) {

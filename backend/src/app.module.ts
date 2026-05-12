@@ -5,6 +5,7 @@ import { FormsModule } from './forms/forms.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { ProjectsController } from './projects/projects.controller';
 import { WorkflowsModule } from './workflows/workflows.module';
+import { CredentialsModule } from './credentials/credentials.module';
 import { RulesController } from './rules/rules.controller';
 
 @Module({
@@ -13,6 +14,7 @@ import { RulesController } from './rules/rules.controller';
     FormsModule, 
     SubmissionsModule, 
     WorkflowsModule,
+    CredentialsModule,
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',

@@ -23,18 +23,23 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
     registerHandler(type, handler) {
         this.handlers.set(type, handler);
     }
+    getHandler(type) {
+        return this.handlers.get(type);
+    }
     async run(executionId) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
+            include: { version: true },
         });
-        if (!execution)
+        if (!execution || !execution.version) {
+            this.logger.error(`Execution ${executionId} or its version not found`);
             return;
+        }
         await this.prisma.workflowExecution.update({
             where: { id: executionId },
             data: { status: 'running' },
         });
-        const graph = execution.workflow.graph;
+        const graph = execution.version.graph;
         const context = {
             executionId,
             workflowId: execution.workflowId,
@@ -117,13 +122,13 @@ let WorkflowRuntimeService = WorkflowRuntimeService_1 = class WorkflowRuntimeSer
     async resume(executionId, action) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
+            include: { version: true },
         });
-        if (!execution)
+        if (!execution || !execution.version)
             return;
         if (execution.status !== 'waiting' && execution.status !== 'running' && execution.status !== 'active')
             return;
-        const graph = execution.workflow.graph;
+        const graph = execution.version.graph;
         const context = {
             executionId,
             workflowId: execution.workflowId,

@@ -13,12 +13,33 @@ exports.WorkflowsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const workflow_runtime_service_1 = require("./runtime/workflow-runtime.service");
+const workflow_orchestrator_service_1 = require("./runtime/workflow-orchestrator.service");
+const expression_resolver_service_1 = require("./runtime/expression-resolver.service");
 let WorkflowsService = class WorkflowsService {
     prisma;
     runtime;
-    constructor(prisma, runtime) {
+    orchestrator;
+    expressionResolver;
+    constructor(prisma, runtime, orchestrator, expressionResolver) {
         this.prisma = prisma;
         this.runtime = runtime;
+        this.orchestrator = orchestrator;
+        this.expressionResolver = expressionResolver;
+    }
+    async testNode(node, context) {
+        const handler = this.runtime.getHandler(node.subType);
+        if (!handler) {
+            throw new common_1.BadRequestException(`No handler found for node type: ${node.subType}`);
+        }
+        const fullContext = {
+            executionId: 'test-execution',
+            workflowId: 'test-workflow',
+            variables: context.variables || {},
+            lastOutput: context.lastOutput || {},
+            nodeOutputs: context.nodeOutputs || {},
+        };
+        const resolvedData = this.expressionResolver.resolve(node.data, fullContext);
+        return await handler.execute({ ...node, data: resolvedData }, fullContext);
     }
     async create(data) {
         if (data.projectId) {
@@ -33,19 +54,11 @@ let WorkflowsService = class WorkflowsService {
             data: {
                 name: data.name,
                 description: data.description,
-                graph: data.graph || { nodes: [], edges: [] },
+                draftGraph: data.graph || { nodes: [], edges: [] },
                 status: data.status || 'draft',
                 projectId: data.projectId,
             },
         });
-        if (workflow.graph && typeof workflow.graph === 'object') {
-            const graph = workflow.graph;
-            graph.id = workflow.id;
-            return this.prisma.workflow.update({
-                where: { id: workflow.id },
-                data: { graph },
-            });
-        }
         return workflow;
     }
     async findAll(projectId) {
@@ -58,6 +71,10 @@ let WorkflowsService = class WorkflowsService {
         const workflow = await this.prisma.workflow.findUnique({
             where: { id },
             include: {
+                versions: {
+                    orderBy: { version: 'desc' },
+                    take: 5,
+                },
                 executions: {
                     take: 10,
                     orderBy: { startTime: 'desc' },
@@ -71,13 +88,9 @@ let WorkflowsService = class WorkflowsService {
     async update(id, data) {
         const updateData = { ...data };
         delete updateData.id;
-        if (updateData.projectId !== undefined && updateData.projectId !== null) {
-            const project = await this.prisma.project.findUnique({
-                where: { id: updateData.projectId },
-            });
-            if (!project) {
-                throw new common_1.NotFoundException(`Project ${updateData.projectId} not found`);
-            }
+        if (updateData.graph) {
+            updateData.draftGraph = updateData.graph;
+            delete updateData.graph;
         }
         try {
             return await this.prisma.workflow.update({
@@ -92,6 +105,32 @@ let WorkflowsService = class WorkflowsService {
             throw error;
         }
     }
+    async publish(id, metadata) {
+        const workflow = await this.prisma.workflow.findUnique({
+            where: { id },
+            include: { versions: { orderBy: { version: 'desc' }, take: 1 } },
+        });
+        if (!workflow || !workflow.draftGraph) {
+            throw new common_1.BadRequestException('Workflow not found or has no draft to publish');
+        }
+        const nextVersion = workflow.versions.length > 0 ? workflow.versions[0].version + 1 : 1;
+        const version = await this.prisma.workflowVersion.create({
+            data: {
+                workflowId: id,
+                version: nextVersion,
+                graph: workflow.draftGraph,
+                metadata: metadata || {},
+            },
+        });
+        await this.prisma.workflow.update({
+            where: { id },
+            data: {
+                activeVersionId: version.id,
+                status: 'active',
+            },
+        });
+        return version;
+    }
     async remove(id) {
         return this.prisma.workflow.delete({
             where: { id },
@@ -100,21 +139,25 @@ let WorkflowsService = class WorkflowsService {
     async createExecution(workflowId, triggerSource, context) {
         const workflow = await this.prisma.workflow.findUnique({
             where: { id: workflowId },
+            include: { versions: true }
         });
         if (!workflow) {
             throw new common_1.NotFoundException(`Workflow ${workflowId} not found`);
         }
+        const versionId = workflow.activeVersionId;
+        if (!versionId) {
+            throw new common_1.BadRequestException(`Workflow ${workflowId} has no active version published`);
+        }
         const execution = await this.prisma.workflowExecution.create({
             data: {
                 workflowId,
+                versionId,
                 triggerSource,
                 context,
                 status: 'queued',
             },
         });
-        this.runtime.run(execution.id).catch(err => {
-            console.error(`Workflow ${workflowId} failed to run:`, err);
-        });
+        await this.orchestrator.startExecution(execution.id);
         return execution;
     }
     async getExecution(executionId) {
@@ -122,7 +165,7 @@ let WorkflowsService = class WorkflowsService {
             where: { id: executionId },
             include: {
                 logs: true,
-                workflow: {
+                version: {
                     select: { graph: true }
                 }
             },
@@ -148,9 +191,14 @@ let WorkflowsService = class WorkflowsService {
                 },
             },
         });
-        this.runtime.resume(executionId, action).catch(err => {
-            console.error(`Workflow ${execution.workflowId} resume failed:`, err);
+        const executionLogs = await this.prisma.workflowLog.findMany({
+            where: { executionId, status: 'waiting' },
+            orderBy: { timestamp: 'desc' },
+            take: 1
         });
+        if (executionLogs.length > 0) {
+            await this.orchestrator.queueNode(executionId, executionLogs[0].nodeId);
+        }
         return { message: 'Execution resumed' };
     }
 };
@@ -158,6 +206,8 @@ exports.WorkflowsService = WorkflowsService;
 exports.WorkflowsService = WorkflowsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        workflow_runtime_service_1.WorkflowRuntimeService])
+        workflow_runtime_service_1.WorkflowRuntimeService,
+        workflow_orchestrator_service_1.WorkflowOrchestrator,
+        expression_resolver_service_1.ExpressionResolverService])
 ], WorkflowsService);
 //# sourceMappingURL=workflows.service.js.map

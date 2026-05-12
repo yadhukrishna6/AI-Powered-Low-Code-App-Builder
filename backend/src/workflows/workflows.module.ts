@@ -18,6 +18,7 @@ import { ApprovalHandler } from './runtime/handlers/approval.handler';
 import { SwitchHandler } from './runtime/handlers/switch.handler';
 import { LoopHandler } from './runtime/handlers/loop.handler';
 import { ScheduleHandler } from './runtime/handlers/schedule.handler';
+import { ExpressionResolverService } from './runtime/expression-resolver.service';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ScheduleHandler } from './runtime/handlers/schedule.handler';
     WorkflowOrchestrator,
     WorkflowWorker,
     WorkflowGateway,
+    ExpressionResolverService,
     StartNodeHandler,
     ConditionHandler,
     ApiRequestHandler,

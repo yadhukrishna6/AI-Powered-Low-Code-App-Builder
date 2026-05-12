@@ -23,12 +23,34 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
               <span class="node-id">{{ node.id }}</span>
             </div>
           </div>
-          <button class="delete-btn" (click)="deleteNode(node.id)" title="Delete Node">
-            <span class="material-icons">delete_outline</span>
-          </button>
+          <div class="header-actions">
+            <button 
+              class="btn-test" 
+              [disabled]="isTestingNode()" 
+              (click)="testNode(node)"
+              title="Execute this node independently"
+            >
+              <span class="material-icons">{{ isTestingNode() ? 'sync' : 'play_circle' }}</span>
+              {{ isTestingNode() ? 'TESTING...' : 'TEST NODE' }}
+            </button>
+            <button class="delete-btn" (click)="deleteNode(node.id)" title="Delete Node">
+              <span class="material-icons">delete_outline</span>
+            </button>
+          </div>
         </header>
 
         <div class="panel-content thin-scrollbar">
+          <!-- Test Result Banner -->
+          <div *ngIf="lastTestResult()" class="test-result-banner" [class.success]="lastTestResult().status === 'success'">
+            <div class="result-header">
+              <span class="material-icons">{{ lastTestResult().status === 'success' ? 'check_circle' : 'error' }}</span>
+              <span>Test {{ lastTestResult().status | titlecase }}</span>
+              <button (click)="lastTestResult.set(null)" class="close-btn"><span class="material-icons">close</span></button>
+            </div>
+            <div class="result-data" (click)="showFullResult()">
+              <pre>{{ lastTestResult().output | json }}</pre>
+            </div>
+          </div>
           <!-- Validation Errors -->
           <div *ngIf="validationErrors()[node.id]?.length" class="validation-errors">
             <div class="error-item" *ngFor="let error of validationErrors()[node.id]">
@@ -78,7 +100,7 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
                 *ngFor="let prop of registry.getEntry(node.subType).properties"
                 [property]="prop"
                 [data]="node.data"
-                (change)="updateNode(node)">
+                (dataChange)="updateNode(node)">
               </app-dynamic-property>
 
               <div *ngIf="!registry.getEntry(node.subType).properties?.length" class="info-alert">
@@ -199,6 +221,42 @@ import { DynamicPropertyComponent } from './dynamic-property.component';
       font-size: 0.75rem; color: #ef4444; margin-bottom: 0.5rem;
     }
     .error-item .material-icons { font-size: 1rem; }
+    
+    .btn-test {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 8px;
+      background: rgba(16, 185, 129, 0.1); color: #10b981;
+      font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2);
+      transition: all 0.2s;
+    }
+    .btn-test:hover:not(:disabled) { background: rgba(16, 185, 129, 0.2); transform: translateY(-1px); }
+    .btn-test:disabled { opacity: 0.6; cursor: wait; }
+    .btn-test .material-icons { font-size: 1.1rem; }
+
+    .test-result-banner {
+      margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden;
+      border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05);
+    }
+    .test-result-banner.success {
+      border-color: rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05);
+    }
+    .result-header {
+      padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+      font-size: 0.75rem; font-weight: 700; background: rgba(0,0,0,0.2);
+    }
+    .result-header .material-icons { font-size: 1rem; }
+    .result-header .close-btn { margin-left: auto; background: none; color: var(--text-secondary); opacity: 0.6; }
+    .result-header .close-btn:hover { opacity: 1; }
+    
+    .result-data { padding: 12px; cursor: pointer; }
+    .result-data pre { 
+      margin: 0; font-size: 0.7rem; color: var(--text-secondary); 
+      max-height: 80px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .test-result-banner.success .result-header { color: #10b981; }
+    .test-result-banner:not(.success) .result-header { color: #ef4444; }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
   `]
 })
 export class PropertiesPanelComponent {
@@ -207,6 +265,8 @@ export class PropertiesPanelComponent {
   modal = inject(ModalService);
 
   validationErrors = signal<{ [key: string]: string[] }>({});
+  isTestingNode = signal(false);
+  lastTestResult = signal<any>(null);
 
   constructor() {
     // Validate on node selection
@@ -215,6 +275,41 @@ export class PropertiesPanelComponent {
       if (node) {
         this.validateNode(node);
       }
+    });
+  }
+
+  async testNode(node: any) {
+    this.isTestingNode.set(true);
+    this.lastTestResult.set(null);
+    
+    try {
+      // Collect mock context (last node outputs, etc)
+      // For now we send empty context, but in production this would gather 
+      // previous node data from the state
+      const mockContext = {
+        variables: {},
+        nodeOutputs: {},
+        lastOutput: {}
+      };
+      
+      const result = await this.state.testNode(node, mockContext);
+      this.lastTestResult.set(result);
+    } catch (e) {
+      this.lastTestResult.set({ status: 'error', output: { message: 'Failed to execute test. Check backend logs.' } });
+    } finally {
+      this.isTestingNode.set(false);
+    }
+  }
+
+  async showFullResult() {
+    const result = this.lastTestResult();
+    if (!result) return;
+    
+    await this.modal.show({
+      title: `Node Test Result: ${result.status}`,
+      message: JSON.stringify(result.output, null, 2),
+      type: result.status === 'success' ? 'success' : 'danger',
+      confirmText: 'Done'
     });
   }
 

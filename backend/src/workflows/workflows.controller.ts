@@ -58,4 +58,9 @@ export class WorkflowsController {
   async generateAI(@Body() body: { prompt: string }) {
     return this.aiWorkflowService.generateWorkflow(body.prompt);
   }
+
+  @Post('test-node')
+  async testNode(@Body() body: { node: any; context: any }) {
+    return this.workflowsService.testNode(body.node, body.context);
+  }
 }

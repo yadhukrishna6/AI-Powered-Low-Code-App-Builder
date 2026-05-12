@@ -48,18 +48,42 @@ import { ActivatedRoute } from '@angular/router';
     </div>
 
     <div class="side-panel glass" *ngIf="currentLog()">
-      <h3>Step Details</h3>
-      <div class="detail-row">
-        <label>Node</label>
-        <span>{{ currentLog().nodeId }} ({{ currentLog().nodeType }})</span>
+      <div class="panel-header-replay">
+        <span class="material-icons">terminal</span>
+        <h3>Execution Inspector</h3>
       </div>
-      <div class="detail-row">
-        <label>Status</label>
-        <span [class]="currentLog().status">{{ currentLog().status }}</span>
+      
+      <div class="step-meta">
+        <div class="detail-row">
+          <label>Node ID</label>
+          <span class="mono">{{ currentLog().nodeId }}</span>
+        </div>
+        <div class="detail-row">
+          <label>Execution Status</label>
+          <span class="status-badge" [class]="currentLog().status">{{ currentLog().status | uppercase }}</span>
+        </div>
+        <div class="detail-row">
+          <label>Duration</label>
+          <span>{{ currentLog().duration || 0 }}ms</span>
+        </div>
       </div>
-      <div class="data-box" *ngIf="currentLog().output">
-        <label>Output Snapshot</label>
-        <pre>{{ currentLog().output | json }}</pre>
+
+      <div class="payload-section">
+        <div class="data-box">
+          <div class="box-header">
+            <span class="material-icons">input</span>
+            <label>Input Payload</label>
+          </div>
+          <pre class="thin-scrollbar">{{ currentLog().input | json }}</pre>
+        </div>
+
+        <div class="data-box">
+          <div class="box-header">
+            <span class="material-icons">output</span>
+            <label>Output Snapshot</label>
+          </div>
+          <pre class="thin-scrollbar">{{ currentLog().output | json }}</pre>
+        </div>
       </div>
     </div>
   `,
@@ -126,28 +150,53 @@ import { ActivatedRoute } from '@angular/router';
     .side-panel {
       position: fixed;
       right: 24px;
-      top: 100px;
-      width: 320px;
-      max-height: 60vh;
+      top: 24px;
+      width: 380px;
+      bottom: 120px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
+      gap: 0;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      overflow: hidden;
     }
 
-    .detail-row { display: flex; justify-content: space-between; font-size: 0.85rem; }
-    .detail-row label { color: var(--text-secondary); }
-    .detail-row .success { color: #10b981; }
-    .detail-row .failed { color: #ef4444; }
+    .panel-header-replay { 
+      padding: 20px; background: rgba(0,0,0,0.2); 
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-header-replay h3 { font-size: 0.9rem; margin: 0; font-weight: 700; color: var(--accent); }
+    .panel-header-replay .material-icons { color: var(--accent); opacity: 0.7; }
 
-    .data-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; }
-    .data-box label { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; display: block; }
-    pre { font-size: 0.7rem; color: #a78bfa; margin: 0; overflow-x: auto; }
+    .step-meta { padding: 20px; border-bottom: 1px solid var(--border); }
+    .detail-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px; }
+    .detail-row label { color: var(--text-secondary); font-weight: 500; }
+    .mono { font-family: monospace; color: var(--accent); }
+
+    .status-badge { 
+      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800;
+      background: rgba(255,255,255,0.1); 
+    }
+    .status-badge.success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .status-badge.failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+    .payload-section { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+    .data-box { background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    .box-header { padding: 8px 12px; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+    .box-header .material-icons { font-size: 0.9rem; color: var(--text-secondary); }
+    .box-header label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
+
+    pre { 
+      padding: 12px; font-size: 0.75rem; color: #94a3b8; 
+      margin: 0; white-space: pre-wrap; word-break: break-all;
+      max-height: 250px;
+    }
 
     .glass {
-      background: rgba(20, 20, 20, 0.8);
+      background: rgba(15, 23, 42, 0.9);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.08);
       color: white;
     }
   `]

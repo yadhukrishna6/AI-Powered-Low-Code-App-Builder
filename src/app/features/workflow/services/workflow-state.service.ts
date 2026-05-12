@@ -148,16 +148,21 @@ export class WorkflowStateService {
         // Map logs to node statuses
         data.logs.forEach((log: any) => {
           this.updateNodeStatus(log.nodeId, log.status as ExecutionStatus, log.error);
-          
-          // Highlight paths
-          const edges = this._workflow().edges.filter(e => e.source === log.nodeId);
-          // In a real replay we would check which edge was actually taken from log metadata
         });
       }
       return data;
     } catch (e) {
       console.error('Failed to load execution history:', e);
       return null;
+    }
+  }
+
+  async testNode(node: WorkflowNode, context: any) {
+    try {
+      return await firstValueFrom(this.http.post<any>(`${this.apiUrl}/test-node`, { node, context }));
+    } catch (e) {
+      console.error('Failed to test node:', e);
+      throw e;
     }
   }
 

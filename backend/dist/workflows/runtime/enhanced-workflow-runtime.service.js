@@ -41,11 +41,11 @@ let EnhancedWorkflowRuntimeService = EnhancedWorkflowRuntimeService_1 = class En
     async runExecution(executionId) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
+            include: { version: true },
         });
-        if (!execution)
+        if (!execution || !execution.version)
             return;
-        const graph = execution.workflow.graph;
+        const graph = execution.version.graph;
         const context = {
             executionId,
             workflowId: execution.workflowId,
@@ -135,7 +135,7 @@ let EnhancedWorkflowRuntimeService = EnhancedWorkflowRuntimeService_1 = class En
     async resumeExecution(executionId, action) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
+            include: { version: true },
         });
         if (!execution || execution.status !== 'waiting') {
             throw new Error('Execution not in waiting state');
@@ -155,7 +155,7 @@ let EnhancedWorkflowRuntimeService = EnhancedWorkflowRuntimeService_1 = class En
     async resumeFromWaitingNode(executionId, action) {
         const execution = await this.prisma.workflowExecution.findUnique({
             where: { id: executionId },
-            include: { workflow: true },
+            include: { version: true },
         });
         if (!execution)
             return;
@@ -165,7 +165,9 @@ let EnhancedWorkflowRuntimeService = EnhancedWorkflowRuntimeService_1 = class En
         });
         if (!waitingLog)
             return;
-        const graph = execution.workflow.graph;
+        if (!execution || !execution.version)
+            return;
+        const graph = execution.version.graph;
         const context = {
             executionId,
             workflowId: execution.workflowId,

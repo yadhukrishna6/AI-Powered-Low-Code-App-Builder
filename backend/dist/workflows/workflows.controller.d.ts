@@ -1,7 +1,9 @@
 import { WorkflowsService } from './workflows.service';
+import { AIWorkflowService } from './ai-workflow.service';
 export declare class WorkflowsController {
     private readonly workflowsService;
-    constructor(workflowsService: WorkflowsService);
+    private readonly aiWorkflowService;
+    constructor(workflowsService: WorkflowsService, aiWorkflowService: AIWorkflowService);
     create(data: any): Promise<{
         name: string;
         projectId: string | null;
@@ -10,8 +12,8 @@ export declare class WorkflowsController {
         updatedAt: Date;
         description: string | null;
         status: string;
-        graph: import("@prisma/client/runtime/library").JsonValue;
-        version: number;
+        draftGraph: import("@prisma/client/runtime/library").JsonValue | null;
+        activeVersionId: string | null;
     }>;
     findAll(projectId?: string): Promise<{
         name: string;
@@ -21,15 +23,24 @@ export declare class WorkflowsController {
         updatedAt: Date;
         description: string | null;
         status: string;
-        graph: import("@prisma/client/runtime/library").JsonValue;
-        version: number;
+        draftGraph: import("@prisma/client/runtime/library").JsonValue | null;
+        activeVersionId: string | null;
     }[]>;
     findOne(id: string): Promise<{
+        versions: {
+            id: string;
+            createdAt: Date;
+            workflowId: string;
+            version: number;
+            graph: import("@prisma/client/runtime/library").JsonValue;
+            metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        }[];
         executions: {
             id: string;
             result: import("@prisma/client/runtime/library").JsonValue | null;
             status: string;
             workflowId: string;
+            versionId: string | null;
             triggerSource: string | null;
             context: import("@prisma/client/runtime/library").JsonValue;
             startTime: Date;
@@ -43,8 +54,8 @@ export declare class WorkflowsController {
         updatedAt: Date;
         description: string | null;
         status: string;
-        graph: import("@prisma/client/runtime/library").JsonValue;
-        version: number;
+        draftGraph: import("@prisma/client/runtime/library").JsonValue | null;
+        activeVersionId: string | null;
     }>;
     update(id: string, data: any): Promise<{
         name: string;
@@ -54,8 +65,8 @@ export declare class WorkflowsController {
         updatedAt: Date;
         description: string | null;
         status: string;
-        graph: import("@prisma/client/runtime/library").JsonValue;
-        version: number;
+        draftGraph: import("@prisma/client/runtime/library").JsonValue | null;
+        activeVersionId: string | null;
     }>;
     remove(id: string): Promise<{
         name: string;
@@ -65,23 +76,32 @@ export declare class WorkflowsController {
         updatedAt: Date;
         description: string | null;
         status: string;
-        graph: import("@prisma/client/runtime/library").JsonValue;
+        draftGraph: import("@prisma/client/runtime/library").JsonValue | null;
+        activeVersionId: string | null;
+    }>;
+    publish(id: string, metadata: any): Promise<{
+        id: string;
+        createdAt: Date;
+        workflowId: string;
         version: number;
+        graph: import("@prisma/client/runtime/library").JsonValue;
+        metadata: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     execute(id: string, context: any): Promise<{
         id: string;
         result: import("@prisma/client/runtime/library").JsonValue | null;
         status: string;
         workflowId: string;
+        versionId: string | null;
         triggerSource: string | null;
         context: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date;
         endTime: Date | null;
     }>;
     getExecution(id: string): Promise<({
-        workflow: {
+        version: {
             graph: import("@prisma/client/runtime/library").JsonValue;
-        };
+        } | null;
         logs: {
             error: string | null;
             id: string;
@@ -98,6 +118,7 @@ export declare class WorkflowsController {
         result: import("@prisma/client/runtime/library").JsonValue | null;
         status: string;
         workflowId: string;
+        versionId: string | null;
         triggerSource: string | null;
         context: import("@prisma/client/runtime/library").JsonValue;
         startTime: Date;
@@ -108,4 +129,11 @@ export declare class WorkflowsController {
     }): Promise<{
         message: string;
     }>;
+    generateAI(body: {
+        prompt: string;
+    }): Promise<any>;
+    testNode(body: {
+        node: any;
+        context: any;
+    }): Promise<import("./runtime/node-handler.interface").NodeResult>;
 }

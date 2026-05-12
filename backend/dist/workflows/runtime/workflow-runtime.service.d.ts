@@ -6,6 +6,7 @@ export declare class WorkflowRuntimeService {
     private handlers;
     constructor(prisma: PrismaService);
     registerHandler(type: string, handler: NodeHandler): void;
+    getHandler(type: string): NodeHandler | undefined;
     run(executionId: string): Promise<void>;
     private logNode;
     private updateExecutionStatus;

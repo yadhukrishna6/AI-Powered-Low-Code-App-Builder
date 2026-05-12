@@ -8,18 +8,32 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const bullmq_1 = require("@nestjs/bullmq");
 const prisma_module_1 = require("./prisma/prisma.module");
 const forms_module_1 = require("./forms/forms.module");
 const submissions_module_1 = require("./submissions/submissions.module");
 const projects_controller_1 = require("./projects/projects.controller");
 const workflows_module_1 = require("./workflows/workflows.module");
+const credentials_module_1 = require("./credentials/credentials.module");
 const rules_controller_1 = require("./rules/rules.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, forms_module_1.FormsModule, submissions_module_1.SubmissionsModule, workflows_module_1.WorkflowsModule],
+        imports: [
+            prisma_module_1.PrismaModule,
+            forms_module_1.FormsModule,
+            submissions_module_1.SubmissionsModule,
+            workflows_module_1.WorkflowsModule,
+            credentials_module_1.CredentialsModule,
+            bullmq_1.BullModule.forRoot({
+                connection: {
+                    host: process.env.REDIS_HOST || 'localhost',
+                    port: parseInt(process.env.REDIS_PORT || '6379'),
+                },
+            }),
+        ],
         controllers: [projects_controller_1.ProjectsController, rules_controller_1.RulesController],
         providers: [],
     })

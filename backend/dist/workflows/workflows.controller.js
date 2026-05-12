@@ -15,10 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkflowsController = void 0;
 const common_1 = require("@nestjs/common");
 const workflows_service_1 = require("./workflows.service");
+const ai_workflow_service_1 = require("./ai-workflow.service");
 let WorkflowsController = class WorkflowsController {
     workflowsService;
-    constructor(workflowsService) {
+    aiWorkflowService;
+    constructor(workflowsService, aiWorkflowService) {
         this.workflowsService = workflowsService;
+        this.aiWorkflowService = aiWorkflowService;
     }
     create(data) {
         return this.workflowsService.create(data);
@@ -35,6 +38,9 @@ let WorkflowsController = class WorkflowsController {
     remove(id) {
         return this.workflowsService.remove(id);
     }
+    publish(id, metadata) {
+        return this.workflowsService.publish(id, metadata);
+    }
     execute(id, context) {
         return this.workflowsService.createExecution(id, 'manual', context);
     }
@@ -43,6 +49,12 @@ let WorkflowsController = class WorkflowsController {
     }
     resumeExecution(id, body) {
         return this.workflowsService.resumeExecution(id, body.action);
+    }
+    async generateAI(body) {
+        return this.aiWorkflowService.generateWorkflow(body.prompt);
+    }
+    async testNode(body) {
+        return this.workflowsService.testNode(body.node, body.context);
     }
 };
 exports.WorkflowsController = WorkflowsController;
@@ -83,6 +95,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], WorkflowsController.prototype, "remove", null);
 __decorate([
+    (0, common_1.Post)(':id/publish'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], WorkflowsController.prototype, "publish", null);
+__decorate([
     (0, common_1.Post)(':id/execute'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -105,8 +125,23 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], WorkflowsController.prototype, "resumeExecution", null);
+__decorate([
+    (0, common_1.Post)('ai/generate'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "generateAI", null);
+__decorate([
+    (0, common_1.Post)('test-node'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "testNode", null);
 exports.WorkflowsController = WorkflowsController = __decorate([
     (0, common_1.Controller)('workflows'),
-    __metadata("design:paramtypes", [workflows_service_1.WorkflowsService])
+    __metadata("design:paramtypes", [workflows_service_1.WorkflowsService,
+        ai_workflow_service_1.AIWorkflowService])
 ], WorkflowsController);
 //# sourceMappingURL=workflows.controller.js.map

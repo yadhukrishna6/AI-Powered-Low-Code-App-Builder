@@ -43,12 +43,12 @@ export class EnhancedWorkflowRuntimeService {
   private async runExecution(executionId: string) {
     const execution = await this.prisma.workflowExecution.findUnique({
       where: { id: executionId },
-      include: { workflow: true },
+      include: { version: true },
     });
 
-    if (!execution) return;
+    if (!execution || !execution.version) return;
 
-    const graph = execution.workflow.graph as any;
+    const graph = execution.version.graph as any;
     const context: ExecutionContext = {
       executionId,
       workflowId: execution.workflowId,
@@ -167,7 +167,7 @@ export class EnhancedWorkflowRuntimeService {
   async resumeExecution(executionId: string, action: 'approve' | 'reject'): Promise<void> {
     const execution = await this.prisma.workflowExecution.findUnique({
       where: { id: executionId },
-      include: { workflow: true },
+      include: { version: true },
     });
 
     if (!execution || execution.status !== 'waiting') {
@@ -191,7 +191,7 @@ export class EnhancedWorkflowRuntimeService {
   private async resumeFromWaitingNode(executionId: string, action: 'approve' | 'reject') {
     const execution = await this.prisma.workflowExecution.findUnique({
       where: { id: executionId },
-      include: { workflow: true },
+      include: { version: true },
     });
 
     if (!execution) return;
@@ -203,7 +203,8 @@ export class EnhancedWorkflowRuntimeService {
 
     if (!waitingLog) return;
 
-    const graph = execution.workflow.graph as any;
+    if (!execution || !execution.version) return;
+    const graph = execution.version.graph as any;
     const context: ExecutionContext = {
       executionId,
       workflowId: execution.workflowId,

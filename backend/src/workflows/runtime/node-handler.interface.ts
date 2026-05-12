@@ -2,6 +2,8 @@ export interface ExecutionContext {
   executionId: string;
   workflowId: string;
   variables: Record<string, any>;
+  lastOutput?: any;
+  nodeOutputs?: Record<string, any>;
   loopContext?: {
     index: number;
     total: number;

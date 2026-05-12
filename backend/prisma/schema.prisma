@@ -15,6 +15,8 @@ model Project {
   status         String     @default("Draft")
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+  orgId          String?
+  organization   Organization? @relation(fields: [orgId], references: [id])
   forms          Form[]
   workflows      Workflow[]
 
@@ -207,3 +209,26 @@ model BusinessRule {
   @@map("business_rules")
 }
 
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  projects    Project[]
+  credentials Credential[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("organizations")
+}
+
+model Credential {
+  id            String   @id @default(uuid())
+  orgId         String
+  organization  Organization @relation(fields: [orgId], references: [id])
+  name          String
+  type          String   // e.g. 'google-oauth2', 'slack-api-key', 'postgres'
+  data          String   // AES-256 encrypted JSON
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("credentials")
+}

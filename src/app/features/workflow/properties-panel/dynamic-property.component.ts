@@ -5,15 +5,34 @@ import { NodeProperty } from '../registry/node-registry';
 import { ProjectService } from '../../../core/services/project.service';
 import { WorkflowStateService } from '../services/workflow-state.service';
 
+import { ExpressionEditorComponent } from '../../../shared/components/expression-editor/expression-editor.component';
+
 @Component({
   selector: 'app-dynamic-property',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExpressionEditorComponent],
   template: `
     <div class="dynamic-property-field">
-      <label>{{ property.label }}</label>
+      <div class="field-header">
+        <label>{{ property.label }}</label>
+        <button 
+          class="expr-toggle" 
+          [class.active]="isExpression(property.key)"
+          (click)="toggleExpression(property.key)"
+          title="Toggle Expression Mode"
+        >
+          <span class="material-icons">code</span>
+        </button>
+      </div>
+
+      <div *ngIf="isExpression(property.key)" class="expression-wrapper">
+        <app-expression-editor 
+          [(value)]="data[property.key]" 
+          (valueChange)="onChanged()">
+        </app-expression-editor>
+      </div>
       
-      <ng-container [ngSwitch]="property.type">
+      <ng-container *ngIf="!isExpression(property.key)" [ngSwitch]="property.type">
         <!-- Form Picker -->
         <select *ngSwitchCase="'form-picker'" 
                 [(ngModel)]="data[property.key]" 
@@ -169,12 +188,19 @@ import { WorkflowStateService } from '../services/workflow-state.service';
       justify-content: center;
     }
     .remove-btn:hover { background: rgba(239, 68, 68, 0.15); }
+    .field-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .expr-toggle { 
+      background: none; border: 1px solid var(--border); color: var(--text-secondary); 
+      padding: 2px 6px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+    }
+    .expr-toggle.active { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+    .expr-toggle .material-icons { font-size: 1rem; }
   `]
 })
 export class DynamicPropertyComponent {
   @Input() property!: NodeProperty;
   @Input() data: any = {};
-  @Output() change = new EventEmitter<any>();
+  @Output() dataChange = new EventEmitter<any>();
 
   projectService = inject(ProjectService);
   workflowState = inject(WorkflowStateService);
@@ -183,7 +209,21 @@ export class DynamicPropertyComponent {
   availableVariables = this.workflowState.availableVariables;
 
   onChanged() {
-    this.change.emit(this.data);
+    this.dataChange.emit(this.data);
+  }
+
+  isExpression(key: string): boolean {
+    const val = this.data[key];
+    return typeof val === 'string' && val.startsWith('{{') && val.endsWith('}}');
+  }
+
+  toggleExpression(key: string) {
+    if (this.isExpression(key)) {
+      this.data[key] = '';
+    } else {
+      this.data[key] = '{{  }}';
+    }
+    this.onChanged();
   }
 
   addRow(key: string, defaultObj: any) {

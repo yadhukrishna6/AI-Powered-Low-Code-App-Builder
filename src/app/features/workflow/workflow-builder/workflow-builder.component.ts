@@ -8,6 +8,7 @@ import { NodePaletteComponent } from '../palette/node-palette.component';
 import { WorkflowCanvasComponent } from '../canvas/workflow-canvas.component';
 import { PropertiesPanelComponent } from '../properties-panel/properties-panel.component';
 import { ExecutionLogsComponent } from '../execution/execution-logs.component';
+import { AIAssistantComponent } from '../ai-assistant/ai-assistant.component';
 import { ModalService } from '../../../core/services/modal.service';
 
 @Component({
@@ -18,7 +19,8 @@ import { ModalService } from '../../../core/services/modal.service';
     NodePaletteComponent,
     WorkflowCanvasComponent,
     PropertiesPanelComponent,
-    ExecutionLogsComponent
+    ExecutionLogsComponent,
+    AIAssistantComponent
   ],
   template: `
     <div class="workflow-container">
@@ -65,6 +67,7 @@ import { ModalService } from '../../../core/services/modal.service';
         <!-- Center Canvas -->
         <main class="canvas-region" style="order: 2;">
           <app-workflow-canvas></app-workflow-canvas>
+          <app-ai-assistant></app-ai-assistant>
         </main>
 
         <!-- Left Palette -->

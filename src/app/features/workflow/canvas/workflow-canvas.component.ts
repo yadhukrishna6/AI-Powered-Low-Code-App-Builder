@@ -26,6 +26,8 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
       #canvasContainer
       id="workflow-canvas"
       (mousedown)="onCanvasMouseDown($event)"
+      (mousemove)="onCanvasMouseMove($event)"
+      (mouseup)="onCanvasMouseUp($event)"
       (wheel)="onWheel($event)"
       cdkDropList
       [cdkDropListData]="null"
@@ -61,6 +63,7 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
           [class.status-cancelled]="node.status === 'cancelled'"
           (mousedown)="onNodeMouseDown($event, node.id)"
         >
+          <!-- ... node content ... -->
           <div class="node-card">
             <div class="node-header" [style.background-color]="registry.getEntry(node.subType).color">
               <span class="material-icons">{{ registry.getEntry(node.subType).icon }}</span>
@@ -69,63 +72,48 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
             
             <div class="node-content">
               <div class="node-title">{{ node.label }}</div>
-              <!-- Runtime Status Badge -->
               <div class="node-status-badge" *ngIf="node.status !== 'idle'">
                 <ng-container [ngSwitch]="node.status">
-                  <span *ngSwitchCase="'queued'" class="badge badge-queued" title="Queued">
-                    <span class="material-icons">hourglass_empty</span>
-                  </span>
-                  <span *ngSwitchCase="'running'" class="badge badge-running" title="Running">
-                    <span class="material-icons icon-spin">sync</span>
-                  </span>
-                  <span *ngSwitchCase="'success'" class="badge badge-success" title="Success">
-                    <span class="material-icons">check_circle</span>
-                  </span>
-                  <span *ngSwitchCase="'error'" class="badge badge-error" title="Failed">
-                    <span class="material-icons">error</span>
-                  </span>
-                  <span *ngSwitchCase="'failed'" class="badge badge-error" title="Failed">
-                    <span class="material-icons">error</span>
-                  </span>
-                  <span *ngSwitchCase="'waiting'" class="badge badge-waiting" title="Awaiting Input">
-                    <span class="material-icons">pause_circle</span>
-                  </span>
-                  <span *ngSwitchCase="'skipped'" class="badge badge-skipped" title="Skipped">
-                    <span class="material-icons">block</span>
-                  </span>
-                  <span *ngSwitchCase="'cancelled'" class="badge badge-cancelled" title="Cancelled">
-                    <span class="material-icons">cancel</span>
-                  </span>
+                  <span *ngSwitchCase="'running'" class="badge badge-running"><span class="material-icons icon-spin">sync</span></span>
+                  <span *ngSwitchCase="'success'" class="badge badge-success"><span class="material-icons">check_circle</span></span>
+                  <span *ngSwitchCase="'failed'" class="badge badge-error"><span class="material-icons">error</span></span>
+                  <span *ngSwitchDefault class="badge"><span class="material-icons">hourglass_empty</span></span>
                 </ng-container>
               </div>
             </div>
 
-            <!-- Error tooltip -->
-            <div class="node-error-bar" *ngIf="node.errorMessage">
-              <span class="material-icons">warning</span>
-              <span class="error-text">{{ node.errorMessage }}</span>
-            </div>
-
-            <!-- Connection Anchors -->
-            <div class="anchor anchor-in handle-in" title="Input"></div>
-            <div 
-              *ngIf="node.subType !== 'end'"
-              class="anchor anchor-out handle-out" 
-              [class.anchor-trigger]="node.type === 'trigger'"
-              [class.anchor-logic]="node.type === 'logic'"
-              [class.anchor-action]="node.type === 'action'"
-              title="Drag to connect"
-            ></div>
+            <div class="anchor anchor-in handle-in"></div>
+            <div *ngIf="node.subType !== 'end'" class="anchor anchor-out handle-out"></div>
           </div>
+        </div>
+
+        <!-- Lasso Selection Box -->
+        <div *ngIf="lassoActive" class="lasso-box" [style.left.px]="lassoBox.x" [style.top.px]="lassoBox.y" [style.width.px]="lassoBox.w" [style.height.px]="lassoBox.h"></div>
+      </div>
+
+      <!-- ─── Mini Map ─── -->
+      <div class="mini-map glass">
+        <div class="mini-map-content">
+           <div *ngFor="let node of state.nodes()" 
+                class="mini-node"
+                [style.left.px]="node.position.x * 0.1" 
+                [style.top.px]="node.position.y * 0.1">
+           </div>
+           <div class="mini-viewport" 
+                [style.left.px]="-state.panPosition().x * 0.1 / state.zoomLevel()"
+                [style.top.px]="-state.panPosition().y * 0.1 / state.zoomLevel()"
+                [style.width.px]="viewportSize.w * 0.1 / state.zoomLevel()"
+                [style.height.px]="viewportSize.h * 0.1 / state.zoomLevel()">
+           </div>
         </div>
       </div>
 
       <!-- Canvas UI Controls -->
       <div class="canvas-ui">
         <div class="zoom-pill">
-          <button (click)="adjustZoom(-0.1)"><span class="material-icons">remove</span></button>
+          <button (click)="adjustZoom(-0.1, null)"><span class="material-icons">remove</span></button>
           <span>{{ (state.zoomLevel() * 100) | number:'1.0-0' }}%</span>
-          <button (click)="adjustZoom(0.1)"><span class="material-icons">add</span></button>
+          <button (click)="adjustZoom(0.1, null)"><span class="material-icons">add</span></button>
           <button class="reset" (click)="resetView()"><span class="material-icons">filter_center_focus</span></button>
         </div>
       </div>
@@ -389,6 +377,42 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
     .zoom-pill button:hover { background: var(--input-bg); color: var(--accent); }
     .zoom-pill button .material-icons { font-size: 1.1rem; }
     .zoom-pill .reset { border-left: 1px solid var(--border); border-radius: 0; padding-left: 12px; margin-left: 4px; }
+
+    /* ─── Lasso Selection ─── */
+    .lasso-box {
+      position: absolute;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      background: rgba(59, 130, 246, 0.1);
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    /* ─── Mini Map ─── */
+    .mini-map {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      width: 200px;
+      height: 150px;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 100;
+      border: 1px solid var(--border);
+    }
+    .mini-map-content { position: relative; width: 100%; height: 100%; background: rgba(0,0,0,0.2); }
+    .mini-node { position: absolute; width: 10px; height: 6px; background: var(--accent); border-radius: 2px; opacity: 0.6; }
+    .mini-viewport { 
+      position: absolute; 
+      border: 1px solid white; 
+      background: rgba(255,255,255,0.05); 
+      pointer-events: none; 
+      transition: all 0.1s linear;
+    }
+
+    .glass {
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(10px);
+    }
   `]
 })
 export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
@@ -404,6 +428,12 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
 
   private previousNodeIds = new Set<string>();
   private renderedEdgeIds = new Set<string>();
+
+  // ─── n8n Style State ───
+  lassoActive = false;
+  lassoStart: Position = { x: 0, y: 0 };
+  lassoBox = { x: 0, y: 0, w: 0, h: 0 };
+  viewportSize = { w: 0, h: 0 };
 
   constructor() {
     // Consolidated sync logic: Ensure nodes are added BEFORE edges are connected
@@ -438,28 +468,24 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.graph.initialize(this.nodesContainer.nativeElement);
     
+    // Initial viewport size for mini-map
+    this.updateViewportSize();
+
     // Listen for manual connections made on the canvas
     this.graph.onConnection(async (info) => {
-      // 1. Always detach the raw user-dragged connection
-      // We will redraw it programmatically if confirmed
+      // ... existing connection logic ...
       this.graph.detachConnection(info.connection);
-
       const sourceNode = this.state.nodes().find(n => n.id === info.sourceId);
       if (!sourceNode) return;
-
       const registryEntry = this.registry.getEntry(sourceNode.subType);
       const branches = registryEntry.branches || [{ id: 'main', label: 'Main' }];
-
       if (branches.length <= 1) {
         this.state.addEdge(info.sourceId, info.targetId, branches[0].id);
         return;
       }
-
       const existingEdges = this.state.edges().filter(e => e.source === info.sourceId);
       const availableBranches = branches.filter(b => !existingEdges.some(e => e.sourceAnchor === b.id));
-
       if (availableBranches.length === 0) return;
-
       const selection = await this.state.promptBranchSelection(availableBranches);
       if (selection) {
         this.state.addEdge(info.sourceId, info.targetId, selection);
@@ -472,92 +498,105 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    this.graph.clear();
+  private updateViewportSize() {
+    const rect = this.canvasContainer.nativeElement.getBoundingClientRect();
+    this.viewportSize = { w: rect.width, h: rect.height };
   }
 
-  private syncEdgesWithGraph(edges: WorkflowEdge[]) {
-    const currentEdgeIds = new Set(edges.map(e => e.id));
-
-    // 1. Remove edges that no longer exist in state
-    this.renderedEdgeIds.forEach(id => {
-      if (!currentEdgeIds.has(id)) {
-        this.graph.removeEdgeById(id);
-        this.renderedEdgeIds.delete(id);
-      }
-    });
-
-    // 2. Add new edges that haven't been rendered yet
-    edges.forEach(edge => {
-      if (!this.renderedEdgeIds.has(edge.id)) {
-        this.graph.connect(edge.source, edge.target, edge);
-        this.renderedEdgeIds.add(edge.id);
-      }
-    });
-
-    // 3. Update runtime execution state styling on existing edges
-    edges.forEach(edge => {
-      if (edge.executionState && edge.executionState !== 'inactive') {
-        this.graph.updateEdgeState(edge.id, edge.executionState);
-      }
-    });
-  }
-
-  trackByNode(index: number, node: WorkflowNode) {
-    return node.id;
-  }
-
-  onDrop(event: CdkDragDrop<any>) {
-    if (typeof event.item.data === 'string') {
-      const containerRect = this.canvasContainer.nativeElement.getBoundingClientRect();
-      const x = (event.dropPoint.x - containerRect.left - this.state.panPosition().x) / this.state.zoomLevel();
-      const y = (event.dropPoint.y - containerRect.top - this.state.panPosition().y) / this.state.zoomLevel();
-      
-      this.state.addNode(event.item.data, { x, y });
-    }
-  }
-
-  onNodeMouseDown(event: MouseEvent, nodeId: string) {
-    event.stopPropagation();
-    this.state.selectNode(nodeId);
+  @HostListener('window:resize')
+  onResize() {
+    this.updateViewportSize();
   }
 
   onCanvasMouseDown(event: MouseEvent) {
     if (event.button === 0) {
       this.state.selectNode(null);
-      this.isPanning = true;
-      this.lastMousePos = { x: event.clientX, y: event.clientY };
+      
+      if (event.shiftKey) {
+        // Start Lasso
+        this.lassoActive = true;
+        const rect = this.canvasContainer.nativeElement.getBoundingClientRect();
+        this.lassoStart = { 
+          x: (event.clientX - rect.left - this.state.panPosition().x) / this.state.zoomLevel(),
+          y: (event.clientY - rect.top - this.state.panPosition().y) / this.state.zoomLevel()
+        };
+        this.lassoBox = { x: this.lassoStart.x, y: this.lassoStart.y, w: 0, h: 0 };
+      } else {
+        // Start Pan
+        this.isPanning = true;
+        this.lastMousePos = { x: event.clientX, y: event.clientY };
+      }
     }
   }
 
-  @HostListener('window:mousemove', ['$event'])
-  onMouseMove(event: MouseEvent) {
+  onCanvasMouseMove(event: MouseEvent) {
+    const rect = this.canvasContainer.nativeElement.getBoundingClientRect();
+
     if (this.isPanning) {
       const dx = event.clientX - this.lastMousePos.x;
       const dy = event.clientY - this.lastMousePos.y;
-      
       this.state.setPan({
         x: this.state.panPosition().x + dx,
         y: this.state.panPosition().y + dy
       });
-      
       this.lastMousePos = { x: event.clientX, y: event.clientY };
+    } else if (this.lassoActive) {
+      const currentX = (event.clientX - rect.left - this.state.panPosition().x) / this.state.zoomLevel();
+      const currentY = (event.clientY - rect.top - this.state.panPosition().y) / this.state.zoomLevel();
+      
+      this.lassoBox = {
+        x: Math.min(this.lassoStart.x, currentX),
+        y: Math.min(this.lassoStart.y, currentY),
+        w: Math.abs(currentX - this.lassoStart.x),
+        h: Math.abs(currentY - this.lassoStart.y)
+      };
     }
   }
 
-  @HostListener('window:mouseup')
-  onMouseUp() {
+  onCanvasMouseUp(event: MouseEvent) {
+    if (this.lassoActive) {
+      // Multi-select nodes within lasso box
+      const selected = this.state.nodes().filter(node => 
+        node.position.x >= this.lassoBox.x && 
+        node.position.x <= this.lassoBox.x + this.lassoBox.w &&
+        node.position.y >= this.lassoBox.y &&
+        node.position.y <= this.lassoBox.y + this.lassoBox.h
+      );
+      
+      if (selected.length > 0) {
+        this.state.selectNode(selected[0].id); // For now select first, in future support multi-select signal
+      }
+    }
+    
     this.isPanning = false;
+    this.lassoActive = false;
   }
 
   onWheel(event: WheelEvent) {
     event.preventDefault();
     const delta = event.deltaY > 0 ? -0.1 : 0.1;
-    this.adjustZoom(delta);
+    this.adjustZoom(delta, event);
   }
 
-  adjustZoom(delta: number) {
-    const newZoom = this.state.zoomLevel() + delta;
+  adjustZoom(delta: number, event: MouseEvent | null) {
+    const oldZoom = this.state.zoomLevel();
+    const newZoom = Math.max(0.1, Math.min(2, oldZoom + delta));
+    
+    if (event) {
+      // Zoom relative to mouse position (n8n style)
+      const rect = this.canvasContainer.nativeElement.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+
+      const worldX = (mouseX - this.state.panPosition().x) / oldZoom;
+      const worldY = (mouseY - this.state.panPosition().y) / oldZoom;
+
+      const newPanX = mouseX - worldX * newZoom;
+      const newPanY = mouseY - worldY * newZoom;
+
+      this.state.setPan({ x: newPanX, y: newPanY });
+    }
+
     this.state.setZoom(newZoom);
     this.graph.setZoom(newZoom);
   }
@@ -566,5 +605,43 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
     this.state.setPan({ x: 0, y: 0 });
     this.state.setZoom(1);
     this.graph.setZoom(1);
+  }
+
+  ngOnDestroy() {
+    this.graph.destroy();
+  }
+
+  trackByNode(index: number, node: any) {
+    return node.id;
+  }
+
+  onDrop(event: CdkDragDrop<any>) {
+    const nodeType = event.item.data;
+    const containerRect = this.canvasContainer.nativeElement.getBoundingClientRect();
+    const pan = this.state.panPosition();
+    const zoom = this.state.zoomLevel();
+    
+    const x = (event.dropPoint.x - containerRect.left - pan.x) / zoom;
+    const y = (event.dropPoint.y - containerRect.top - pan.y) / zoom;
+
+    this.state.addNode(nodeType, { x, y });
+  }
+
+  private syncEdgesWithGraph(edges: any[]) {
+    const currentEdgeIds = new Set(edges.map(e => e.id));
+    this.renderedEdgeIds.forEach(id => {
+      if (!currentEdgeIds.has(id)) this.graph.removeEdge(id);
+    });
+
+    edges.forEach(edge => {
+      if (!this.renderedEdgeIds.has(edge.id)) {
+        this.graph.connectNodes(edge.source, edge.target, {
+          id: edge.id,
+          sourceHandle: edge.sourceHandle || edge.sourceAnchor,
+          targetHandle: edge.targetHandle || edge.targetAnchor,
+        });
+      }
+    });
+    this.renderedEdgeIds = currentEdgeIds;
   }
 }

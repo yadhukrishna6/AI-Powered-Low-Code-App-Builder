@@ -21,6 +21,7 @@
     "@types/jsplumb": "^1.3.31",
     "@types/uuid": "^10.0.0",
     "jsplumb": "^2.15.6",
+    "monaco-editor": "^0.55.1",
     "rxjs": "^7.8.0",
     "socket.io-client": "^4.8.3",
     "tslib": "^2.6.0",
