@@ -21,6 +21,9 @@ let SubmissionsController = class SubmissionsController {
     constructor(submissionsService) {
         this.submissionsService = submissionsService;
     }
+    findAll() {
+        return this.submissionsService.findAll();
+    }
     create(createSubmissionDto) {
         return this.submissionsService.create(createSubmissionDto);
     }
@@ -33,7 +36,13 @@ let SubmissionsController = class SubmissionsController {
 };
 exports.SubmissionsController = SubmissionsController;
 __decorate([
-    (0, common_1.Post)('submissions'),
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], SubmissionsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -48,14 +57,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], SubmissionsController.prototype, "findByForm", null);
 __decorate([
-    (0, common_1.Get)('submissions/:id'),
+    (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], SubmissionsController.prototype, "findOne", null);
 exports.SubmissionsController = SubmissionsController = __decorate([
-    (0, common_1.Controller)(),
+    (0, common_1.Controller)('submissions'),
     __metadata("design:paramtypes", [submissions_service_1.SubmissionsService])
 ], SubmissionsController);
 //# sourceMappingURL=submissions.controller.js.map

@@ -1,6 +1,8 @@
 // Top navigation bar with project actions
 import { Component, inject, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { FormBuilderService } from '../../../../core/services/form-builder.service';
 import { ProjectService } from '../../../../core/services/project.service';
@@ -100,7 +102,7 @@ import { ModalService } from '../../../../core/services/modal.service';
           <span class="material-icons" *ngIf="!service.isSaving()">save</span>
           {{ service.isSaving() ? 'Saving...' : 'Save App' }}
         </button>
-        <button class="btn-play" title="Live Preview">
+        <button class="btn-play" (click)="testSimulation()" title="Live Preview">
           <span class="material-icons">play_arrow</span>
         </button>
       </div>
@@ -237,6 +239,8 @@ export class TopNavComponent {
   @Input() projectName = 'Untitled App';
   @Output() onAiClick = new EventEmitter<void>();
 
+  private http = inject(HttpClient);
+
   onNameChange(event: Event) {
     const newName = (event.target as HTMLInputElement).value.trim();
     const project = this.projectService.activeProject();
@@ -274,14 +278,51 @@ export class TopNavComponent {
 
   async testSubmission() {
     const project = this.projectService.activeProject();
-    if (project) {
-      // TODO: Wire to submissions API
+    if (!project) return;
+
+    try {
+      // Simulate a form submission
+      await this.modalService.show({
+        title: 'Simulation Started',
+        message: 'This will send a mock submission to your backend to test the workflow.',
+        type: 'info',
+        confirmText: 'Submit Mock Data'
+      });
+
+      // Find the first form in this project (or use a placeholder)
+      // For this demo, we'll use a hardcoded form ID if none exists
+      const formId = (project as any).forms?.[0]?.id || 'simulation-form-id';
+
+      await firstValueFrom(this.http.post('http://localhost:3000/api/v1/submissions', {
+        formId: formId,
+        data: {
+          fullName: 'Test User',
+          email: 'test@example.com',
+          message: 'This is a simulation'
+        }
+      }));
+
       await this.modalService.show({
         title: 'Simulation Successful',
-        message: 'A mock submission has been recorded. You can view it in the "Data" tab.',
+        message: 'A mock submission has been recorded. You can view it in the "Submissions" tab.',
         type: 'success',
-        confirmText: 'View Data now'
+        confirmText: 'Great'
       });
+    } catch (e) {
+      console.error('Simulation failed', e);
+      this.modalService.show({
+        title: 'Simulation Failed',
+        message: 'The submission could not be processed. Ensure your backend is running and the form ID is valid.',
+        type: 'danger'
+      });
+    }
+  }
+
+  testSimulation() {
+    // Open the runtime preview for this project
+    const project = this.projectService.activeProject();
+    if (project) {
+      window.open(`/runtime/app/${project.id}`, '_blank');
     }
   }
 }

@@ -3,6 +3,21 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 export declare class SubmissionsController {
     private readonly submissionsService;
     constructor(submissionsService: SubmissionsService);
+    findAll(): Promise<({
+        form: {
+            id: string;
+            createdAt: Date;
+            name: string;
+            projectId: string | null;
+            schema: import("@prisma/client/runtime/library").JsonValue;
+            updatedAt: Date;
+        };
+    } & {
+        data: import("@prisma/client/runtime/library").JsonValue;
+        id: string;
+        createdAt: Date;
+        formId: string;
+    })[]>;
     create(createSubmissionDto: CreateSubmissionDto): Promise<{
         data: import("@prisma/client/runtime/library").JsonValue;
         id: string;
@@ -17,11 +32,11 @@ export declare class SubmissionsController {
     }[]>;
     findOne(id: string): Promise<{
         form: {
-            name: string;
-            schema: import("@prisma/client/runtime/library").JsonValue;
-            projectId: string | null;
             id: string;
             createdAt: Date;
+            name: string;
+            projectId: string | null;
+            schema: import("@prisma/client/runtime/library").JsonValue;
             updatedAt: Date;
         };
     } & {

@@ -71,7 +71,7 @@ export class WorkflowStateService {
       const created = await firstValueFrom(this.http.post<any>(this.apiUrl, payload));
       // Always use the DB record ID as the canonical workflow ID
       this._dbId = created.id;
-      const graph = created.graph || this._workflow();
+      const graph = created.draftGraph || this._workflow();
       graph.id = created.id;
       this.loadWorkflow(graph, projectId);
       return created.id;
@@ -173,7 +173,7 @@ export class WorkflowStateService {
         const first = workflows[0];
         // Always override graph.id with the canonical DB record ID
         this._dbId = first.id;
-        const graph = first.graph || { nodes: [], edges: [] };
+        const graph = first.draftGraph || { nodes: [], edges: [] };
         graph.id = first.id;
         this.loadWorkflow(graph, projectId);
         return first.id;

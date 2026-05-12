@@ -2,11 +2,16 @@ import { Controller, Get, Post, Body, Param, HttpStatus, HttpCode } from '@nestj
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 
-@Controller()
+@Controller('submissions')
 export class SubmissionsController {
   constructor(private readonly submissionsService: SubmissionsService) {}
 
-  @Post('submissions')
+  @Get()
+  findAll() {
+    return this.submissionsService.findAll();
+  }
+
+  @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createSubmissionDto: CreateSubmissionDto) {
     return this.submissionsService.create(createSubmissionDto);
@@ -17,7 +22,7 @@ export class SubmissionsController {
     return this.submissionsService.findByForm(formId);
   }
 
-  @Get('submissions/:id')
+  @Get(':id')
   findOne(@Param('id') id: string) {
     return this.submissionsService.findOne(id);
   }

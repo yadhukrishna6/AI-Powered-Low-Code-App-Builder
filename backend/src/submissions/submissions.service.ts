@@ -39,6 +39,13 @@ export class SubmissionsService {
     });
   }
 
+  async findAll() {
+    return this.prisma.submission.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { form: true }
+    });
+  }
+
   async findOne(id: string) {
     const submission = await this.prisma.submission.findUnique({
       where: { id },
