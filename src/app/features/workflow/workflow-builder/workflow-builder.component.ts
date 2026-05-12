@@ -44,6 +44,10 @@ import { ModalService } from '../../../core/services/modal.service';
               <span class="material-icons">save</span>
               Save
             </button>
+            <button class="btn-ghost btn-publish" (click)="publishWorkflow()">
+              <span class="material-icons">publish</span>
+              Publish
+            </button>
             <div class="divider"></div>
             <button 
               class="btn-run" 
@@ -288,6 +292,36 @@ export class WorkflowBuilderComponent implements OnInit {
     }
 
     await this.runtime.executeWorkflow(workflow, variables);
+  }
+
+  async publishWorkflow() {
+    const versionName = await this.modal.show({
+      title: 'Publish New Version',
+      message: 'Enter a name or tag for this version (e.g. v1.2.0, Production-Ready)',
+      type: 'prompt',
+      placeholder: 'Version tag...',
+      initialValue: 'v1.0.0',
+      confirmText: 'Publish Version'
+    });
+
+    if (!versionName) return;
+
+    const result = await this.state.publishWorkflow({ versionName });
+    if (result) {
+      await this.modal.show({
+        title: 'Successfully Published',
+        message: `Version ${versionName} is now live and ready for production execution.`,
+        type: 'success',
+        confirmText: 'Excellent'
+      });
+    } else {
+      await this.modal.show({
+        title: 'Publish Failed',
+        message: 'Could not publish the workflow. Please ensure you have saved your changes first.',
+        type: 'danger',
+        confirmText: 'Close'
+      });
+    }
   }
 
   async saveWorkflow() {

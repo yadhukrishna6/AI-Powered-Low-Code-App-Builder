@@ -465,6 +465,11 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
         this.state.addEdge(info.sourceId, info.targetId, selection);
       }
     });
+
+    // Handle node position updates (persisting snapping)
+    this.graph.onDragStop((info) => {
+      this.state.updateNodePosition(info.nodeId, info.position);
+    });
   }
 
   ngOnDestroy() {

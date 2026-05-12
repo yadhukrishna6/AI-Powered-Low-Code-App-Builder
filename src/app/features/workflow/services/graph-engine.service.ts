@@ -77,8 +77,14 @@ export class GraphEngineService {
   }
 
   private connectionCallback?: (info: any) => void;
+  private dragStopCallback?: (info: { nodeId: string, position: Position }) => void;
+
   onConnection(callback: (info: any) => void) {
     this.connectionCallback = callback;
+  }
+
+  onDragStop(callback: (info: { nodeId: string, position: Position }) => void) {
+    this.dragStopCallback = callback;
   }
 
   addNode(nodeId: string) {
@@ -89,9 +95,12 @@ export class GraphEngineService {
 
     this.instance.draggable(el, {
       containment: 'parent',
-      grid: [20, 20], // Grid snapping
+      grid: [20, 20], // Snapping to 20px grid
       stop: (params: any) => {
-        // Emit new position
+        this.dragStopCallback?.({
+          nodeId,
+          position: { x: params.pos[0], y: params.pos[1] }
+        });
       }
     } as any);
 
@@ -185,8 +194,7 @@ export class GraphEngineService {
     
     // jsPlumb zoom is tricky, usually involves CSS transform + setZoom
     this.instance.setZoom(zoom);
-    this.container.style.transform = `scale(${zoom})`;
-    this.container.style.transformOrigin = '0 0';
+    // Transform is handled by the component for better control
   }
 
   clear() {
