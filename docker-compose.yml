@@ -21,34 +21,5 @@ services:
     ports:
       - "6379:6379"
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: flowforge-backend
-    restart: always
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/flowforge?schema=public
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - PORT=3000
-      - ENCRYPTION_KEY=your-secure-dev-key-minimum-32-chars
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
-      - redis
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: flowforge-frontend
-    restart: always
-    ports:
-      - "4200:80"
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
