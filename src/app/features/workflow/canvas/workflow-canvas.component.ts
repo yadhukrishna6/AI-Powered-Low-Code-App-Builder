@@ -91,22 +91,6 @@ import { WorkflowNode, WorkflowEdge, Position } from '../models/workflow.model';
         <div *ngIf="lassoActive" class="lasso-box" [style.left.px]="lassoBox.x" [style.top.px]="lassoBox.y" [style.width.px]="lassoBox.w" [style.height.px]="lassoBox.h"></div>
       </div>
 
-      <!-- ─── Mini Map ─── -->
-      <div class="mini-map glass">
-        <div class="mini-map-content">
-           <div *ngFor="let node of state.nodes()" 
-                class="mini-node"
-                [style.left.px]="node.position.x * 0.1" 
-                [style.top.px]="node.position.y * 0.1">
-           </div>
-           <div class="mini-viewport" 
-                [style.left.px]="-state.panPosition().x * 0.1 / state.zoomLevel()"
-                [style.top.px]="-state.panPosition().y * 0.1 / state.zoomLevel()"
-                [style.width.px]="viewportSize.w * 0.1 / state.zoomLevel()"
-                [style.height.px]="viewportSize.h * 0.1 / state.zoomLevel()">
-           </div>
-        </div>
-      </div>
 
       <!-- Canvas UI Controls -->
       <div class="canvas-ui">
@@ -506,6 +490,11 @@ export class WorkflowCanvasComponent implements AfterViewInit, OnDestroy {
   @HostListener('window:resize')
   onResize() {
     this.updateViewportSize();
+  }
+
+  onNodeMouseDown(event: MouseEvent, nodeId: string) {
+    event.stopPropagation();
+    this.state.selectNode(nodeId);
   }
 
   onCanvasMouseDown(event: MouseEvent) {

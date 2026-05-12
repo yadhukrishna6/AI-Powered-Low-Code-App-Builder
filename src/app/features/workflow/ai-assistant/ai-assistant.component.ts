@@ -10,11 +10,10 @@ import { firstValueFrom } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="ai-assistant-container" [class.expanded]="isExpanded()">
-      <div class="assistant-bar glass" (click)="!isExpanded() && isExpanded.set(true)">
-        <span class="material-icons ai-icon">auto_awesome</span>
-        
-        <div class="input-wrapper" *ngIf="isExpanded()">
+    <div class="ai-assistant-overlay" *ngIf="isExpanded()" (click)="close($event)">
+      <div class="ai-assistant-container glass" (click)="$event.stopPropagation()">
+        <div class="input-wrapper">
+          <span class="material-icons ai-icon">auto_awesome</span>
           <input 
             #promptInput
             type="text" 
@@ -22,6 +21,7 @@ import { firstValueFrom } from 'rxjs';
             placeholder="Describe the workflow you want to build..."
             (keyup.enter)="generate()"
             [disabled]="isGenerating()"
+            autofocus
           >
           <div class="actions">
             <button class="btn-cancel" (click)="close($event)">Cancel</button>
@@ -33,57 +33,39 @@ import { firstValueFrom } from 'rxjs';
           </div>
         </div>
 
-        <div class="collapsed-label" *ngIf="!isExpanded()">
-          AI Workflow Assistant
-          <span class="shortcut">⌘ + K</span>
+        <div class="ai-status" *ngIf="statusMessage()">
+          <span class="material-icons">info</span>
+          {{ statusMessage() }}
         </div>
-      </div>
-
-      <div class="ai-status" *ngIf="statusMessage()">
-        <span class="material-icons">info</span>
-        {{ statusMessage() }}
       </div>
     </div>
   `,
   styles: [`
-    .ai-assistant-container {
+    .ai-assistant-overlay {
       position: fixed;
-      bottom: 120px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: flex;
+      justify-content: center;
+      padding-top: 100px;
+    }
+
+    .ai-assistant-container {
+      width: 600px;
+      height: fit-content;
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 12px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .assistant-bar {
-      height: 48px;
-      padding: 0 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-radius: 24px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-      cursor: pointer;
-      width: 240px;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(20px);
-    }
-
-    .ai-assistant-container.expanded .assistant-bar {
-      width: 600px;
-      height: 64px;
-      padding: 0 8px 0 20px;
-      border-radius: 16px;
-      cursor: default;
-    }
-
-    .ai-icon { color: #a78bfa; font-size: 1.2rem; }
+    .ai-icon { color: #a78bfa; font-size: 1.5rem; }
 
     .collapsed-label {
       font-size: 0.85rem; font-weight: 600; color: #f8fafc;
@@ -130,11 +112,15 @@ export class AIAssistantComponent {
   prompt = signal('');
   statusMessage = signal<string | null>(null);
 
-  close(event: MouseEvent) {
-    event.stopPropagation();
+  close(event?: MouseEvent) {
+    if (event) event.stopPropagation();
     this.isExpanded.set(false);
     this.prompt.set('');
     this.statusMessage.set(null);
+  }
+
+  toggle() {
+    this.isExpanded.update(v => !v);
   }
 
   async generate() {

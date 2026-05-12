@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed } from '@angular/core';
+import { Component, inject, OnInit, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
@@ -23,6 +23,7 @@ import { ModalService } from '../../../core/services/modal.service';
     AIAssistantComponent
   ],
   template: `
+    <app-ai-assistant #aiAssistant></app-ai-assistant>
     <div class="workflow-container">
       <header class="builder-header">
         <div class="header-main">
@@ -51,6 +52,9 @@ import { ModalService } from '../../../core/services/modal.service';
               Publish
             </button>
             <div class="divider"></div>
+            <button class="btn-ai-round" (click)="aiAssistant.toggle()" title="AI Workflow Assistant">
+              <span class="material-icons">auto_awesome</span>
+            </button>
             <button 
               class="btn-run" 
               [disabled]="isRunning()" 
@@ -67,7 +71,6 @@ import { ModalService } from '../../../core/services/modal.service';
         <!-- Center Canvas -->
         <main class="canvas-region" style="order: 2;">
           <app-workflow-canvas></app-workflow-canvas>
-          <app-ai-assistant></app-ai-assistant>
         </main>
 
         <!-- Left Palette -->
@@ -178,6 +181,25 @@ import { ModalService } from '../../../core/services/modal.service';
     .btn-run:disabled { opacity: 0.4; cursor: wait; filter: grayscale(1); }
     .btn-run .material-icons { font-size: 1.2rem; }
 
+    .btn-ai-round {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: #a78bfa;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(167, 139, 250, 0.15);
+    }
+    .btn-ai-round:hover {
+      background: #a78bfa;
+      color: white;
+      transform: translateY(-2px) rotate(15deg);
+      box-shadow: 0 8px 20px rgba(167, 139, 250, 0.3);
+    }
+    .btn-ai-round .material-icons { font-size: 1.4rem; }
+
     .builder-content {
       flex: 1;
       display: flex;
@@ -211,6 +233,8 @@ export class WorkflowBuilderComponent implements OnInit {
   route = inject(ActivatedRoute);
   projectService = inject(ProjectService);
   modal = inject(ModalService);
+
+  @ViewChild('aiAssistant') aiAssistant!: AIAssistantComponent;
 
   isRunning = computed(() => this.runtime.activeExecutionContext()?.status === 'active');
   showLogs = computed(() => this.runtime.activeExecutionContext() !== null);
