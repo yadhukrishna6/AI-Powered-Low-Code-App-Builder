@@ -33,7 +33,7 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
       <div class="card-body">
         <div class="field-preview" [ngSwitch]="field.type">
 
-          <!-- Text / Email / Number -->
+          <!-- Text Input -->
           <div *ngSwitchCase="'text'" class="preview-group">
             <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
             <input 
@@ -44,6 +44,35 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
               (ngModelChange)="onValueChange($event)"
               class="preview-input"
             >
+          </div>
+
+          <!-- Email Input -->
+          <div *ngSwitchCase="'email'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <input 
+              type="email" 
+              [placeholder]="field.placeholder || 'example@email.com'" 
+              [disabled]="!isRuntime" 
+              [(ngModel)]="field.defaultValue"
+              (ngModelChange)="onValueChange($event)"
+              class="preview-input"
+            >
+          </div>
+
+          <!-- Password Input -->
+          <div *ngSwitchCase="'password'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <div class="password-wrapper">
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                [disabled]="!isRuntime" 
+                [(ngModel)]="field.defaultValue"
+                (ngModelChange)="onValueChange($event)"
+                class="preview-input"
+              >
+              <span class="pw-icon">👁️</span>
+            </div>
           </div>
 
           <div *ngSwitchCase="'select'" class="preview-group">
@@ -57,6 +86,28 @@ import { FormBuilderService } from '../../../../core/services/form-builder.servi
               <option value="" disabled>{{ field.placeholder || 'Select an option...' }}</option>
               <option *ngFor="let opt of field.props?.options || field.options" [value]="opt">{{ opt }}</option>
             </select>
+          </div>
+
+          <!-- Radio Group -->
+          <div *ngSwitchCase="'radio'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <div class="radio-group">
+              <div *ngFor="let opt of field.props?.options || field.options || ['Option 1', 'Option 2']" class="radio-item">
+                <input type="radio" [name]="field.id" [disabled]="!isRuntime">
+                <span>{{ opt }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checkbox Group -->
+          <div *ngSwitchCase="'checkbox'" class="preview-group">
+            <label class="preview-label">{{ field.label }} <span *ngIf="field.required" class="req">*</span></label>
+            <div class="radio-group">
+              <div *ngFor="let opt of field.props?.options || field.options || ['Check 1']" class="checkbox-item">
+                <input type="checkbox" [disabled]="!isRuntime">
+                <span>{{ opt }}</span>
+              </div>
+            </div>
           </div>
 
           <div *ngSwitchCase="'date'" class="preview-group">
