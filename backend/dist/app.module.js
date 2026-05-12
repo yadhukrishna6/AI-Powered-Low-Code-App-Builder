@@ -16,6 +16,8 @@ const projects_controller_1 = require("./projects/projects.controller");
 const workflows_module_1 = require("./workflows/workflows.module");
 const credentials_module_1 = require("./credentials/credentials.module");
 const rules_controller_1 = require("./rules/rules.controller");
+const entities_module_1 = require("./entities/entities.module");
+const applications_module_1 = require("./applications/applications.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -27,6 +29,8 @@ exports.AppModule = AppModule = __decorate([
             submissions_module_1.SubmissionsModule,
             workflows_module_1.WorkflowsModule,
             credentials_module_1.CredentialsModule,
+            entities_module_1.EntitiesModule,
+            applications_module_1.ApplicationsModule,
             bullmq_1.BullModule.forRoot({
                 connection: {
                     host: process.env.REDIS_HOST || 'localhost',

@@ -19,8 +19,70 @@ model Project {
   organization   Organization? @relation(fields: [orgId], references: [id])
   forms          Form[]
   workflows      Workflow[]
+  entities       Entity[]
+  pages          Page[]
+  layout         AppLayout?
 
   @@map("projects")
+}
+
+model Entity {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  name        String
+  description String?
+  metadata    Json?
+  fields      Field[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("entities")
+}
+
+model Field {
+  id           String   @id @default(uuid())
+  entityId     String
+  entity       Entity   @relation(fields: [entityId], references: [id])
+  name         String
+  type         String   // String, Int, DateTime, Boolean, Relation
+  isRequired   Boolean  @default(false)
+  isUnique     Boolean  @default(false)
+  defaultValue String?
+  relationTo   String?
+  relationType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("fields")
+}
+
+model Page {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  name        String
+  route       String
+  type        String   // crud, dashboard, custom, form
+  content     Json?    // Layout metadata for the page
+  config      Json?    // Page specific settings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pages")
+}
+
+model AppLayout {
+  id          String   @id @default(uuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id])
+  navigation  Json     // Sidebar/Topnav structure
+  theme       Json?    // Theme overrides
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_layouts")
 }
 
 model Form {

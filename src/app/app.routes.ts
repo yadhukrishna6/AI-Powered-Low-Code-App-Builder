@@ -33,6 +33,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/submissions/submissions.component').then(m => m.SubmissionsComponent)
       },
       {
+        path: 'project/:id/data',
+        loadComponent: () => import('./features/data-designer/data-designer.component').then(m => m.DataDesignerComponent)
+      },
+      {
+        path: 'project/:id/app',
+        loadComponent: () => import('./features/app-designer/app-designer.component').then(m => m.AppDesignerComponent)
+      },
+      {
         path: 'templates',
         loadComponent: () => import('./features/templates/templates.component').then(m => m.TemplatesComponent)
       },

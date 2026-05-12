@@ -37,48 +37,68 @@ import { ProjectService } from '../../../../core/services/project.service';
           </div>
         </div>
 
-        <!-- Project Context (Only if project active) -->
+        <!-- Project Context (Step-by-Step Build Flow) -->
         <div class="nav-section" *ngIf="projectService.activeProject() as project">
-          <div class="section-label">WORKSPACE: {{ project.name }}</div>
+          <div class="section-label">BUILD: {{ project.name }}</div>
           
+          <div class="nav-item" 
+               [routerLink]="['/project', project.id, 'data']"
+               routerLinkActive="active"
+               title="1. Database: Define your data models and entities">
+            <div class="icon-box">
+              <span class="material-icons">database</span>
+            </div>
+            <span class="label">1. Database</span>
+          </div>
+
           <div class="nav-item" 
                [routerLink]="['/project', project.id, 'designer']"
                routerLinkActive="active"
-               title="Visual App Designer">
+               title="2. Designer: Build visual forms and pages">
             <div class="icon-box">
               <span class="material-icons">architecture</span>
             </div>
-            <span class="label">Designer</span>
+            <span class="label">2. UI Designer</span>
           </div>
 
           <div class="nav-item" 
                [routerLink]="['/project', project.id, 'workflow']"
                routerLinkActive="active"
-               title="Workflow Automation">
+               title="3. Workflows: Automate business processes">
             <div class="icon-box">
               <span class="material-icons">hub</span>
             </div>
-            <span class="label">Workflows</span>
+            <span class="label">3. Workflows</span>
           </div>
 
           <div class="nav-item" 
                [routerLink]="['/project', project.id, 'rules']"
                routerLinkActive="active"
-               title="Rule Engine">
+               title="4. Rules: Define fine-grained business logic">
             <div class="icon-box">
               <span class="material-icons">gavel</span>
             </div>
-            <span class="label">Rule Engine</span>
+            <span class="label">4. Rule Engine</span>
+          </div>
+
+          <div class="nav-item" 
+               [routerLink]="['/project', project.id, 'app']"
+               routerLinkActive="active"
+               title="5. App Architect: Configure app shell and routing">
+            <div class="icon-box">
+              <span class="material-icons">rocket_launch</span>
+            </div>
+            <span class="label">5. App Architect</span>
           </div>
 
           <div class="nav-item" 
                [routerLink]="['/project', project.id, 'submissions']"
                routerLinkActive="active"
-               title="Submissions">
+               title="6. Data: View and manage application data">
             <div class="icon-box">
               <span class="material-icons">storage</span>
             </div>
-            <span class="label">Data</span>
+            <span class="label">6. Submissions</span>
           </div>
         </div>
 

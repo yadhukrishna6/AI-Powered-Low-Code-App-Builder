@@ -32,6 +32,14 @@ export declare class WorkflowsService {
         activeVersionId: string | null;
     }[]>;
     findOne(id: string): Promise<{
+        versions: {
+            id: string;
+            createdAt: Date;
+            workflowId: string;
+            version: number;
+            graph: import("@prisma/client/runtime/library").JsonValue;
+            metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        }[];
         executions: {
             id: string;
             result: import("@prisma/client/runtime/library").JsonValue | null;
@@ -42,14 +50,6 @@ export declare class WorkflowsService {
             context: import("@prisma/client/runtime/library").JsonValue;
             startTime: Date;
             endTime: Date | null;
-        }[];
-        versions: {
-            id: string;
-            createdAt: Date;
-            workflowId: string;
-            version: number;
-            graph: import("@prisma/client/runtime/library").JsonValue;
-            metadata: import("@prisma/client/runtime/library").JsonValue | null;
         }[];
     } & {
         name: string;
